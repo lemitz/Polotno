@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Полотно</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Inter Variable (официальный, SIL OFL, лицензия: /fonts/INTER-LICENSE.txt) */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-cyrillic-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-cyrillic-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin-ext-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("/fonts/jetbrains-mono-cyrillic-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2-variations");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+:root {
+  --ink: #212121;
+  --ink-2: #292929;
+  --ink-3: #313131;
+  --paper: #F5F5F0;
+  --acid: #B7FF00;
+  --line: rgba(245,245,240,.11);
+  --line-2: rgba(245,245,240,.2);
+  --dim: rgba(245,245,240,.74);
+  --mute: rgba(245,245,240,.52);
+  --sans: "Inter", "Inter Variable", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: "JetBrains Mono Variable", "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --ease: cubic-bezier(.2,.8,.2,1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ink); color: var(--paper); font: 400 14px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+svg.i { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; background: rgba(245,245,240,.08); border: 1px solid var(--line); color: var(--paper); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--acid); outline-offset: 2px; }
+
+/* ---------- холст ---------- */
+#viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none; background: var(--ink); contain: strict; }
+#viewport.panning, #viewport.panning * { cursor: grabbing !important; }
+#viewport.panmode, #viewport.panmode .card { cursor: grab; }
+#viewport.linking, #viewport.linking * { cursor: crosshair !important; }
+#world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; will-change: transform; }
+#grid {
+  position: absolute; left: -20000px; top: -20000px; width: 40000px; height: 40000px; pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(245,245,240,.26) 2px, transparent 2.6px),
+    radial-gradient(circle, rgba(245,245,240,.13) 1.3px, transparent 1.8px);
+  background-size: 160px 160px, 32px 32px;
+  background-position: -80px -80px, -16px -16px;
+}
+.lod-xfar #grid, .lod-dot #grid { opacity: 0; }
+#edges { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+#cards, #labels, #groups { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+#groups { --gi: 1; z-index: 0; }
+#labels { z-index: 1; }
+#cards { z-index: 2; }
+
+/* ---------- карточки ---------- */
+.card {
+  --tc: #A3A99A; --tf: #2d2f2a;
+  position: absolute; left: 0; top: 0; display: flex; flex-direction: column;
+  min-width: 200px; padding: 12px 14px 14px; border-radius: 12px;
+  background: var(--ink-2); border: 1px solid var(--line);
+  box-shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 28px rgba(0,0,0,.28);
+  user-select: none; -webkit-user-select: none; contain: layout style;
+}
+.card.t-markdown { --tc: #B5A98A; --tf: #302e28; }
+.card.t-link { --tc: #8FA3A0; --tf: #292f2e; }
+.card.t-image { --tc: #8C98A6; --tf: #292d31; }
+.card.t-video { --tc: #A89090; --tf: #302a2a; }
+.card.t-audio { --tc: #9C94A8; --tf: #2d2b31; }
+.card.t-youtube { --tc: #A88F7E; --tf: #312b27; }
+.card.t-file { --tc: #8D8D88; --tf: #2b2b2a; }
+.card.cull, .edge.cull, .elabel.cull { visibility: hidden; pointer-events: none; }
+.card::after {
+  content: ""; position: absolute; inset: -2px; border-radius: 14px; border: 2px solid var(--acid);
+  opacity: 0; pointer-events: none; transition: opacity .14s var(--ease);
+}
+.card:hover::after { opacity: .38; }
+.card.sel::after { opacity: 1; }
+.card.drop::after { opacity: 1; border-style: dashed; }
+.card.top { z-index: 5; }
+.c-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 22px; cursor: grab; }
+.c-type { display: inline-flex; align-items: center; gap: 7px; font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--tc); }
+.c-type i { width: 8px; height: 8px; border-radius: 3px; background: var(--tc); flex: none; }
+.c-acts { display: flex; gap: 2px; margin-right: -6px; }
+.c-act {
+  width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--mute);
+  opacity: 0; transition: opacity .14s var(--ease), background-color .14s var(--ease);
+}
+.c-act svg.i { width: 15px; height: 15px; }
+.card:hover .c-act, .card.sel .c-act, .c-act:focus-visible { opacity: 1; }
+.c-act:hover { background: rgba(245,245,240,.1); color: var(--paper); }
+.c-act.del:hover { background: rgba(245,245,240,.1); color: var(--acid); }
+.c-title { margin-top: 8px; font: 600 16px/1.3 var(--sans); letter-spacing: -.01em; color: var(--paper); word-break: break-word; outline: none; cursor: grab; min-height: 20px; }
+.c-title:empty::before { content: attr(data-ph); color: var(--mute); }
+.c-body { position: relative; margin-top: 8px; flex: 1 1 auto; min-height: 0; }
+.c-body.clamp { max-height: 150px; overflow: hidden; }
+.card.has-more .c-body.clamp::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 44px; background: linear-gradient(rgba(41,41,41,0), var(--ink-2)); pointer-events: none; }
+.card.expanded .c-body { max-height: 460px; overflow-y: auto; overscroll-behavior: contain; }
+.card.fixed-h .c-body { max-height: none; overflow-y: auto; overscroll-behavior: contain; }
+.c-body.clamp.fixed-h::after, .card.expanded .c-body::after { display: none; }
+.c-body::-webkit-scrollbar { width: 6px; }
+.c-body::-webkit-scrollbar-thumb { background: rgba(245,245,240,.16); border-radius: 3px; }
+.c-text { font-size: 14px; line-height: 1.55; color: var(--dim); white-space: pre-wrap; word-break: break-word; outline: none; min-height: 20px; cursor: grab; }
+.card [contenteditable] { user-select: text; -webkit-user-select: text; cursor: text !important; }
+.c-title[contenteditable], .c-text[contenteditable], .c-md[contenteditable], .elabel .t[contenteditable] { background: rgba(183,255,0,.07); box-shadow: 0 0 0 2px rgba(183,255,0,.45); border-radius: 4px; }
+.c-more { align-self: flex-start; margin-top: 8px; font: 500 12px/1 var(--mono); letter-spacing: .04em; color: var(--mute); padding: 6px 8px; margin-left: -8px; border-radius: 6px; display: none; }
+.c-more:hover { color: var(--acid); background: rgba(245,245,240,.06); }
+.card.has-more .c-more { display: inline-block; }
+.c-body img { display: block; width: 100%; height: auto; border-radius: 8px; pointer-events: none; -webkit-user-drag: none; }
+.c-body video { display: block; width: 100%; border-radius: 8px; }
+.c-body audio { display: block; width: 100%; }
+.c-yt { position: relative; width: 100%; padding-bottom: 56.25%; border-radius: 8px; overflow: hidden; background: #111; cursor: pointer; }
+.c-yt img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.c-yt .play { position: absolute; left: 50%; top: 50%; width: 56px; height: 40px; margin: -20px 0 0 -28px; border-radius: 12px; background: var(--acid); display: grid; place-items: center; }
+.c-yt .play::after { content: ""; border: 9px solid transparent; border-left: 14px solid var(--ink); margin-left: 5px; }
+.c-yt iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.c-yt .fallback { position: absolute; inset: 0; display: grid; place-content: center; gap: 10px; padding: 16px; text-align: center; background: var(--ink); color: var(--dim); font-size: 14px; }
+.c-link, .c-file { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(245,245,240,.05); border: 1px solid var(--line); color: var(--paper); text-decoration: none; min-width: 0; }
+.c-link .u, .c-file .u { font: 400 12px/1.4 var(--mono); color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.c-link svg.i, .c-file svg.i { color: var(--acid); }
+.c-link:hover, .c-file:hover { border-color: rgba(183,255,0,.45); }
+/* markdown */
+.c-md { font-size: 14px; line-height: 1.6; color: var(--dim); word-break: break-word; outline: none; cursor: grab; }
+.c-md h1, .c-md h2, .c-md h3 { color: var(--paper); font-weight: 600; letter-spacing: -.01em; margin: 12px 0 6px; line-height: 1.3; }
+.c-md > :first-child { margin-top: 0; }
+.c-md h1 { font-size: 20px; } .c-md h2 { font-size: 18px; } .c-md h3 { font-size: 16px; }
+.c-md p { margin: 6px 0; }
+.c-md ul, .c-md ol { margin: 6px 0; padding-left: 22px; }
+.c-md li { margin: 3px 0; }
+.c-md strong { color: var(--paper); font-weight: 600; }
+.c-md em { color: var(--paper); }
+.c-md code { font: 400 13px/1.4 var(--mono); background: rgba(245,245,240,.08); padding: 1px 5px; border-radius: 4px; color: var(--acid); }
+.c-md pre { background: rgba(0,0,0,.28); padding: 10px 12px; border-radius: 8px; overflow-x: auto; margin: 8px 0; border: 1px solid var(--line); }
+.c-md pre code { background: none; padding: 0; color: var(--paper); }
+.c-md blockquote { border-left: 3px solid var(--acid); padding-left: 12px; margin: 8px 0; color: var(--mute); }
+.c-md a { color: var(--acid); text-decoration: underline; text-underline-offset: 2px; }
+.c-md hr { border: 0; border-top: 1px solid var(--line-2); margin: 12px 0; }
+/* порты и ресайз */
+.port {
+  position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  background: var(--ink); border: 2px solid var(--acid); cursor: crosshair; opacity: 0; z-index: 3;
+  transition: opacity .14s var(--ease), transform .14s var(--ease);
+}
+.port::before { content: ""; position: absolute; inset: -8px; border-radius: 50%; }
+.port[data-side="t"] { left: 50%; top: 0; } .port[data-side="b"] { left: 50%; top: 100%; }
+.port[data-side="l"] { left: 0; top: 50%; } .port[data-side="r"] { left: 100%; top: 50%; }
+.card:hover .port, .card.sel .port, .card.drop .port { opacity: 1; }
+.port:hover { transform: scale(1.35); background: var(--acid); }
+.c-rs { position: absolute; right: 3px; bottom: 3px; width: 16px; height: 16px; cursor: nwse-resize; opacity: 0; z-index: 2; transition: opacity .14s var(--ease); }
+.c-rs::before { content: ""; position: absolute; right: 2px; bottom: 2px; width: 9px; height: 9px; border-right: 2px solid var(--mute); border-bottom: 2px solid var(--mute); border-bottom-right-radius: 4px; }
+.card:hover .c-rs, .card.sel .c-rs { opacity: 1; }
+.c-rs:hover::before { border-color: var(--acid); }
+/* далёкие уровни детализации */
+.c-far { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; padding: 0 16px; text-align: center; pointer-events: none; }
+.c-far span { font-weight: 600; letter-spacing: -.01em; line-height: 1.12; color: var(--paper); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; overflow-wrap: break-word; hyphens: auto; }
+.lod-far .card, .lod-xfar .card, .lod-dot .card { background: var(--tf); box-shadow: none; border-color: transparent; }
+.lod-far .card { box-shadow: inset 0 6px 0 var(--tc); border-radius: 18px; }
+.lod-xfar .card { box-shadow: inset 0 14px 0 var(--tc); border-radius: 30px; overflow: visible; }
+.lod-dot .card { background: var(--tc); border-radius: 40px; }
+.lod-far .card > :not(.c-far), .lod-xfar .card > :not(.c-far), .lod-dot .card > :not(.c-far) { visibility: hidden; }
+.lod-far .c-far, .lod-xfar .c-far { display: flex; }
+.lod-far .c-far span { font-size: 38px; -webkit-line-clamp: 3; }
+.lod-xfar .c-far { overflow: visible; }
+.lod-xfar .c-far span { display: block; font-size: 70px; width: 440px; flex: none; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 0 14px var(--ink), 0 0 3px var(--ink); }
+.lod-far .card::after { border-width: 8px; inset: -8px; border-radius: 24px; }
+.lod-xfar .card::after { border-width: 18px; inset: -18px; border-radius: 44px; }
+.lod-dot .card::after { border-width: 36px; inset: -36px; border-radius: 70px; }
+.lod-far .elabel:not(.sel), .lod-xfar .elabel, .lod-dot .elabel, .lod-dot .e-arrow { display: none; }
+
+/* ---------- группы (рамки) ---------- */
+/* --gi = max(1, 1/масштаб): ярлычок и линия рамки держат читаемый размер на экране при отдалении */
+.gf { position: absolute; left: 0; top: 0; pointer-events: none; }
+.g-box {
+  position: absolute; inset: 0; pointer-events: none;
+  border: calc(2px * var(--gi)) dashed rgba(183,255,0,.34); border-radius: calc(16px * var(--gi));
+  background: rgba(183,255,0,.035);
+}
+.gf.new .g-box { animation: gin .32s var(--ease); }
+@keyframes gin { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+.gf.sel .g-box { border-style: solid; border-color: rgba(183,255,0,.85); background: rgba(183,255,0,.06); }
+.gf.drop .g-box { border-style: solid; border-color: var(--acid); background: rgba(183,255,0,.12); }
+.gf.leave .g-box { opacity: .45; }
+.g-h { position: absolute; pointer-events: auto; cursor: grab; }
+.g-h.t { left: 0; right: 0; top: calc(-8px * var(--gi)); height: calc(16px * var(--gi)); }
+.g-h.b { left: 0; right: 0; bottom: calc(-8px * var(--gi)); height: calc(16px * var(--gi)); }
+.g-h.l { top: 0; bottom: 0; left: calc(-8px * var(--gi)); width: calc(16px * var(--gi)); }
+.g-h.r { top: 0; bottom: 0; right: calc(-8px * var(--gi)); width: calc(16px * var(--gi)); }
+.g-tab {
+  position: absolute; left: 0; bottom: 100%; margin-bottom: calc(8px * var(--gi)); transform-origin: 0 100%; transform: scale(var(--gi));
+  display: flex; align-items: center; gap: 8px; max-width: 360px; height: 30px; padding: 0 6px 0 12px; border-radius: 9px;
+  background: #343a22; border: 1px solid rgba(183,255,0,.4); color: var(--paper); pointer-events: auto; cursor: grab; user-select: none; -webkit-user-select: none;
+}
+.gf.sel .g-tab { background: var(--acid); border-color: var(--acid); color: var(--ink); }
+.gf.drop .g-tab { border-color: var(--acid); }
+.g-title { font: 600 14px/1.2 var(--sans); letter-spacing: -.005em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; outline: none; min-width: 8px; padding: 2px 0; }
+.g-title:empty::before { content: attr(data-ph); opacity: .55; }
+.g-title[contenteditable] { text-overflow: clip; cursor: text; user-select: text; -webkit-user-select: text; background: rgba(33,33,33,.35); box-shadow: 0 0 0 2px rgba(183,255,0,.55); border-radius: 4px; padding: 2px 4px; margin: 0 -4px; min-width: 60px; }
+.gf.sel .g-title[contenteditable] { background: rgba(33,33,33,.12); box-shadow: 0 0 0 2px var(--ink); }
+.g-n { font: 500 12px/1 var(--mono); color: rgba(183,255,0,.8); }
+.gf.sel .g-n { color: rgba(33,33,33,.7); }
+.g-x { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: inherit; opacity: 0; transition: opacity .14s var(--ease); }
+.g-x svg.i { width: 14px; height: 14px; }
+.gf:hover .g-x, .gf.sel .g-x, .g-x:focus-visible { opacity: .8; }
+.g-x:hover { opacity: 1 !important; background: rgba(245,245,240,.14); }
+.gf.sel .g-x:hover { background: rgba(33,33,33,.15); }
+.lod-dot .g-box, .lod-xfar .g-box { background: rgba(183,255,0,.05); border-color: rgba(183,255,0,.5); }
+
+/* ---------- связи ---------- */
+.edge .e-line { fill: none; stroke: rgba(245,245,240,.34); stroke-width: calc(2px * var(--inv, 1)); stroke-linecap: round; }
+.edge .e-arrow { fill: rgba(245,245,240,.55); }
+.edge .e-hit { fill: none; stroke: transparent; stroke-width: calc(16px * var(--inv, 1)); pointer-events: stroke; cursor: pointer; }
+.edge:hover .e-line { stroke: rgba(245,245,240,.7); }
+.edge:hover .e-arrow { fill: rgba(245,245,240,.85); }
+.edge.hl .e-line { stroke: rgba(183,255,0,.7); }
+.edge.hl .e-arrow { fill: var(--acid); }
+.edge.sel .e-line { stroke: var(--acid); stroke-width: calc(3px * var(--inv, 1)); }
+.edge.sel .e-arrow { fill: var(--acid); }
+.e-temp { fill: none; stroke: var(--acid); stroke-width: calc(2px * var(--inv, 1)); stroke-dasharray: calc(7px * var(--inv, 1)) calc(6px * var(--inv, 1)); stroke-linecap: round; pointer-events: none; }
+.elabel {
+  position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 4px; max-width: 260px;
+  padding: 3px 10px; border-radius: 999px; background: var(--ink); border: 1px solid var(--line-2);
+  font: 500 12px/1.4 var(--sans); color: var(--dim); white-space: nowrap; cursor: pointer; user-select: none;
+  transform-origin: 0 0;
+}
+.elabel .t { outline: none; overflow: hidden; text-overflow: ellipsis; padding: 0 1px; min-width: 6px; }
+.elabel .t:empty::before { content: attr(data-ph); color: var(--mute); }
+.elabel .ex { width: 18px; height: 18px; margin-right: -6px; border-radius: 50%; display: none; place-items: center; color: var(--mute); }
+.elabel .ex svg.i { width: 12px; height: 12px; stroke-width: 2.4; }
+.elabel .ex:hover { background: rgba(245,245,240,.12); color: var(--acid); }
+.elabel.sel { border-color: var(--acid); color: var(--paper); }
+.elabel.sel .ex { display: grid; }
+.elabel.empty:not(.sel) { display: none; }
+.elabel:hover { border-color: rgba(245,245,240,.45); color: var(--paper); }
+
+/* ---------- интерфейс ---------- */
+#bar { position: fixed; top: 12px; left: 12px; right: 12px; z-index: 50; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; pointer-events: none; }
+.grp { pointer-events: auto; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 12px; background: var(--ink-2); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.32); }
+.brand { display: flex; align-items: center; gap: 9px; padding: 0 10px 0 4px; }
+.brand img { width: 28px; height: 28px; border-radius: 8px; display: block; }
+.brand b { font: 700 15px/1 var(--sans); letter-spacing: -.02em; }
+.sep { width: 1px; align-self: stretch; margin: 6px 4px; background: var(--line); }
+.btn { position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; min-width: 34px; padding: 0 9px; border-radius: 9px; font: 500 14px/1 var(--sans); color: var(--dim); transition: background-color .14s var(--ease), color .14s var(--ease), transform .14s var(--ease); }
+.btn:hover { background: rgba(245,245,240,.08); color: var(--paper); }
+.btn:active { transform: scale(.96); }
+.btn[disabled] { opacity: .35; pointer-events: none; }
+.btn.primary { background: var(--acid); color: var(--ink); font-weight: 700; padding: 0 12px 0 10px; }
+.btn.primary:hover { background: #c9ff3d; color: var(--ink); }
+.btn.proj { padding: 0 8px 0 10px; color: var(--paper); max-width: 240px; }
+.btn.proj span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.zoom { font: 500 12px/1 var(--mono); min-width: 52px; }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; top: calc(100% + 8px); left: 50%; z-index: 60; padding: 6px 9px; border-radius: 8px;
+  background: var(--paper); color: var(--ink); font: 500 12px/1.2 var(--sans); white-space: nowrap; pointer-events: none;
+  opacity: 0; transform: translate(-50%, -3px); transition: opacity .14s var(--ease), transform .14s var(--ease);
+}
+[data-tip]:hover::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .35s; }
+.grp.r [data-tip]::after { left: auto; right: 0; transform: translate(0, -3px); }
+.grp.r [data-tip]:hover::after { transform: translate(0, 0); }
+.save { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px 0 6px; font: 500 12px/1 var(--mono); color: var(--mute); white-space: nowrap; }
+.save i { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); }
+.save.busy i { background: var(--mute); }
+.save.err { color: var(--paper); } .save.err i { background: #e0705a; }
+#pmenu { position: fixed; z-index: 70; top: 58px; left: 12px; width: 280px; max-height: calc(100% - 120px); overflow: auto; padding: 6px; border-radius: 14px; background: var(--ink-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+#pmenu[hidden], #keys[hidden], #dlg[hidden], #hint[hidden] { display: none; }
+#pmenu .lab { padding: 8px 10px 6px; font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+.pi { position: relative; display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 10px; border-radius: 9px; cursor: pointer; color: var(--dim); font-weight: 500; }
+.pi:hover { background: rgba(245,245,240,.06); color: var(--paper); }
+.pi.on { background: rgba(183,255,0,.1); color: var(--paper); box-shadow: inset 2px 0 0 var(--acid); }
+.pi .n { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; outline: none; min-width: 0; }
+.pi .n[contenteditable] { background: rgba(183,255,0,.08); box-shadow: 0 0 0 2px rgba(183,255,0,.45); border-radius: 4px; text-overflow: clip; }
+.pi .a { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; color: var(--mute); opacity: 0; }
+.pi .a svg.i { width: 15px; height: 15px; }
+.pi:hover .a, .pi .a:focus-visible { opacity: 1; }
+.pi .a:hover { background: rgba(245,245,240,.1); color: var(--acid); }
+.padd { display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px; padding: 9px 10px; border-radius: 9px; border: 1px dashed var(--line-2); color: var(--dim); font-weight: 500; }
+.padd:hover { border-color: var(--acid); color: var(--acid); }
+#mmwrap { position: fixed; right: 12px; bottom: 12px; z-index: 40; width: 208px; height: 140px; padding: 4px; border-radius: 12px; background: var(--ink-2); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0,0,0,.32); }
+#minimap { display: block; width: 200px; height: 132px; border-radius: 8px; cursor: pointer; touch-action: none; }
+#hint { position: fixed; left: 12px; bottom: 12px; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 12px; background: var(--ink-2); border: 1px solid var(--line); color: var(--dim); font-size: 13px; box-shadow: 0 6px 20px rgba(0,0,0,.32); max-width: calc(100% - 250px); flex-wrap: wrap; }
+#hint .s { color: var(--mute); }
+#hint .x { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: var(--mute); }
+#hint .x:hover { background: rgba(245,245,240,.1); color: var(--paper); }
+#hint .x svg.i { width: 14px; height: 14px; }
+#keys { position: fixed; z-index: 80; right: 12px; bottom: 164px; width: 400px; max-width: calc(100% - 24px); max-height: calc(100% - 230px); overflow: auto; padding: 16px 18px; border-radius: 14px; background: var(--ink-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+#keys h4 { font: 600 16px/1.2 var(--sans); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+#keys .row { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 6px 0; border-top: 1px solid var(--line); color: var(--dim); font-size: 13px; }
+#keys .row > span:last-child { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+#keys .foot { margin-top: 12px; color: var(--mute); font-size: 13px; }
+#empty { position: fixed; inset: 0; z-index: 10; display: none; align-items: center; justify-content: center; pointer-events: none; text-align: center; padding: 20px; }
+#empty.on { display: flex; }
+#empty .in { max-width: 460px; display: grid; gap: 14px; justify-items: center; }
+#empty img { width: 56px; height: 56px; border-radius: 14px; opacity: .9; }
+#empty h2 { font: 700 28px/1.15 var(--sans); letter-spacing: -.03em; }
+#empty p { color: var(--dim); font-size: 15px; line-height: 1.6; }
+#empty p kbd { font-size: 12px; }
+#toasts { position: fixed; z-index: 90; left: 50%; bottom: 20px; transform: translateX(-50%); display: grid; gap: 8px; justify-items: center; pointer-events: none; }
+.toast { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 14px; border-radius: 12px; background: var(--paper); color: var(--ink); font-weight: 500; font-size: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.4); animation: tin .22s var(--ease); }
+.toast button { font-weight: 700; padding: 5px 10px; border-radius: 8px; background: var(--ink); color: var(--acid); }
+.toast button:hover { background: #000; }
+@keyframes tin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#dlg { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(33,33,33,.8); padding: 20px; }
+#dlg .box { width: 420px; max-width: 100%; padding: 22px; border-radius: 16px; background: var(--ink-2); border: 1px solid var(--line-2); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+#dlg p { font-size: 15px; line-height: 1.55; margin-bottom: 18px; }
+#dlg .bt { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+#dlg .bt .btn { border: 1px solid var(--line-2); padding: 0 14px; height: 36px; }
+#dlg .bt .btn.primary { border-color: var(--acid); }
+#tip { position: fixed; z-index: 85; left: 0; top: 0; width: 280px; padding: 12px 14px; border-radius: 12px; background: var(--ink-2); border: 1px solid var(--line-2); box-shadow: 0 10px 30px rgba(0,0,0,.4); pointer-events: none; opacity: 0; }
+#tip.on { opacity: 1; }
+#tip .k { font: 500 12px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--mute); margin-bottom: 7px; }
+#tip .h { font-weight: 600; font-size: 15px; line-height: 1.3; }
+#tip .p { margin-top: 5px; color: var(--dim); font-size: 13px; line-height: 1.45; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+#drop { position: fixed; inset: 10px; z-index: 95; display: none; align-items: center; justify-content: center; border: 2px dashed var(--acid); border-radius: 18px; background: rgba(33,33,33,.82); pointer-events: none; font: 600 22px/1.3 var(--sans); color: var(--acid); }
+#drop.on { display: flex; }
+#marquee { position: absolute; left: 0; top: 0; width: 0; height: 0; display: none; border: 1px solid var(--acid); background: rgba(183,255,0,.07); pointer-events: none; z-index: 20; }
+#imp { display: none; }
+@media (max-width: 900px) {
+  .brand b, .btn .lb, .save .lb { display: none; }
+  #hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }
+}
+</style>
+</head>
+<body>
+<div id="viewport">
+  <div id="world" class="lod-full">
+    <div id="grid"></div>
+    <div id="groups"></div>
+    <svg id="edges" xmlns="http://www.w3.org/2000/svg"><g id="edgeLayer"></g></svg>
+    <div id="cards"></div>
+    <div id="labels"></div>
+  </div>
+  <div id="marquee"></div>
+</div>
+
+<div id="empty">
+  <div class="in">
+    <img src="/favicon.svg" alt="">
+    <h2>Пусто. Кидай сюда мысли.</h2>
+    <p><kbd>Двойной клик</kbd> новая карточка. <kbd>Ctrl+V</kbd> вставить текст, ссылку или картинку. Файл на холст: подхвачу.</p>
+  </div>
+</div>
+
+<header id="bar">
+  <div class="grp l">
+    <div class="brand"><img src="/favicon.svg" alt=""><b>Полотно</b></div>
+    <div class="sep"></div>
+    <button class="btn proj" id="projBtn" data-tip="Мои полотна" aria-haspopup="true"><span id="projName"></span><svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+    <div class="save" id="save"><i></i><span class="lb">сохранено</span></div>
+  </div>
+  <div class="grp c">
+    <button class="btn primary" id="addBtn" data-tip="Новая карточка (N)"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span class="lb">Карточка</span></button>
+    <div class="sep"></div>
+    <button class="btn" id="undoBtn" data-tip="Отменить (Ctrl+Z)" aria-label="Отменить"><svg class="i" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    <button class="btn" id="redoBtn" data-tip="Вернуть (Ctrl+Shift+Z)" aria-label="Вернуть"><svg class="i" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+    <div class="sep"></div>
+    <button class="btn" id="groupBtn" data-tip="Сгруппировать (Ctrl+G)" aria-label="Сгруппировать" disabled><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
+    <button class="btn" id="ungroupBtn" data-tip="Разгруппировать (Ctrl+Shift+G)" aria-label="Разгруппировать" disabled><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4" rx=".8"/><rect x="13" y="13" width="4" height="4" rx=".8"/></svg></button>
+  </div>
+  <div class="grp r">
+    <button class="btn" id="fitBtn" data-tip="Весь холст (1)" aria-label="Весь холст"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="btn" id="zoomOut" data-tip="Отдалить (−)" aria-label="Отдалить"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button class="btn zoom" id="zoomLabel" data-tip="Вернуть 100% (0)">100%</button>
+    <button class="btn" id="zoomIn" data-tip="Приблизить (+)" aria-label="Приблизить"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <div class="sep"></div>
+    <button class="btn" id="exportBtn" data-tip="Скачать JSON (Ctrl+S)" aria-label="Экспорт"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
+    <button class="btn" id="importBtn" data-tip="Загрузить JSON" aria-label="Импорт"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg></button>
+    <button class="btn" id="helpBtn" data-tip="Горячие клавиши (?)" aria-label="Горячие клавиши"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></button>
+  </div>
+</header>
+
+<div id="pmenu" hidden></div>
+<div id="mmwrap"><canvas id="minimap" width="200" height="132"></canvas></div>
+<div id="hint"><span><kbd>2×клик</kbd> карточка</span><span class="s">·</span><span><kbd>Ctrl+V</kbd> вставить</span><span class="s">·</span><span><kbd>Пробел</kbd> таскать холст</span><span class="s">·</span><span><kbd>?</kbd> все клавиши</span><button class="x" id="hintX" aria-label="Скрыть подсказку"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+<div id="keys" hidden>
+  <h4>Горячие клавиши <button class="c-act" style="opacity:1" id="keysX" aria-label="Закрыть"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></h4>
+  <div class="row"><span>Новая карточка</span><span><kbd>2×клик</kbd><kbd>N</kbd></span></div>
+  <div class="row"><span>Править текст</span><span><kbd>2×клик</kbd> по тексту</span></div>
+  <div class="row"><span>Подлететь к карточке</span><span><kbd>2×клик</kbd> издалека</span></div>
+  <div class="row"><span>Вставить текст, ссылку, картинку</span><span><kbd>Ctrl+V</kbd></span></div>
+  <div class="row"><span>Двигать холст</span><span><kbd>Пробел</kbd><kbd>СКМ</kbd><kbd>фон</kbd></span></div>
+  <div class="row"><span>Зум к курсору</span><span><kbd>Колесо</kbd><kbd>+</kbd><kbd>−</kbd></span></div>
+  <div class="row"><span>Связь</span><span>тянуть от точки на краю</span></div>
+  <div class="row"><span>Несколько карточек</span><span><kbd>Shift+клик</kbd><kbd>Shift+рамка</kbd></span></div>
+  <div class="row"><span>Сгруппировать выделенное</span><span><kbd>Ctrl+G</kbd></span></div>
+  <div class="row"><span>Разгруппировать</span><span><kbd>Ctrl+Shift+G</kbd></span></div>
+  <div class="row"><span>Название группы</span><span><kbd>2×клик</kbd> по ярлычку</span></div>
+  <div class="row"><span>Всё сразу</span><span><kbd>Ctrl+A</kbd></span></div>
+  <div class="row"><span>Дубль</span><span><kbd>Ctrl+D</kbd></span></div>
+  <div class="row"><span>Удалить</span><span><kbd>Del</kbd></span></div>
+  <div class="row"><span>Отмена и возврат</span><span><kbd>Ctrl+Z</kbd><kbd>Ctrl+Shift+Z</kbd></span></div>
+  <div class="row"><span>Весь холст / 100%</span><span><kbd>1</kbd><kbd>0</kbd></span></div>
+  <div class="row"><span>Скачать JSON</span><span><kbd>Ctrl+S</kbd></span></div>
+  <div class="foot">Всё лежит у тебя в браузере. Сервера нет, чужих глаз нет.</div>
+</div>
+<div id="toasts"></div>
+<div id="dlg" hidden><div class="box"><p id="dlgMsg"></p><div class="bt" id="dlgBt"></div></div></div>
+<div id="tip"><div class="k"></div><div class="h"></div><div class="p"></div></div>
+<div id="drop">Бросай сюда, подхвачу</div>
+<input type="file" id="imp" accept=".json,application/json">
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const LS_KEY = 'polotno_kobyla_artifact_v041';
+const HINT_KEY = 'polotno_hint_hidden';
+const MIN_S = 0.04, MAX_S = 3;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+/* ---------- десктоп (Tauri) ----------
+   В браузере всего этого нет, и файл работает как на сайте. */
+const TAURI = window.__TAURI__ && window.__TAURI__.core ? window.__TAURI__ : null;
+const DESK = !!TAURI;
+const invoke = (cmd, args) => TAURI.core.invoke(cmd, args);
+const FILE_EXT = 'polotno';
+const FILE_FILTERS = [{ name: 'Полотно', extensions: [FILE_EXT] }, { name: 'JSON', extensions: ['json'] }];
+const baseName = p => String(p || '').split(/[\\/]/).pop();
+// потолок кадров: WebView2 рисует с частотой монитора, сверху режем до 260
+const FRAME_MS = 1000 / 260;
+
+const viewport = $('#viewport'), world = $('#world'), cardsLayer = $('#cards'), labelsLayer = $('#labels'), groupsLayer = $('#groups');
+const edgesSvg = $('#edges'), edgeLayer = $('#edgeLayer');
+const zoomLabel = $('#zoomLabel'), projName = $('#projName'), saveEl = $('#save');
+const emptyEl = $('#empty'), tip = $('#tip'), mmCanvas = $('#minimap'), marquee = $('#marquee');
+
+const ICON = {
+  x: '<svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  ext: '<svg class="i" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>',
+  file: '<svg class="i" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>',
+  edit: '<svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>',
+  trash: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>',
+  plus: '<svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  ungroup: '<svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M9 9l6 6M15 9l-6 6"/></svg>'
+};
+const TYPES = {
+  text: { label: 'Текст', w: 300, title: 'Новая карточка' },
+  markdown: { label: 'Markdown', w: 380, title: 'Markdown' },
+  link: { label: 'Ссылка', w: 300, title: 'Ссылка' },
+  image: { label: 'Картинка', w: 340, title: 'Изображение' },
+  video: { label: 'Видео', w: 360, title: 'Видео' },
+  audio: { label: 'Аудио', w: 320, title: 'Аудио' },
+  youtube: { label: 'YouTube', w: 320, title: 'YouTube' },
+  file: { label: 'Файл', w: 280, title: 'Файл' }
+};
+
+/* ---------- данные ---------- */
+const S = { projects: [], pid: null };
+let P = null;                         // текущее полотно
+const view = { x: 0, y: 0, s: 1 };    // то, что нарисовано
+const target = { x: 0, y: 0, s: 1 };  // куда едем
+let vw = innerWidth, vh = innerHeight;
+let sel = new Set(), selEdge = null, selGroup = null;
+const groupEls = new Map(), gMembers = new Map();
+const cardEls = new Map(), edgeEls = new Map(), cardMap = new Map(), incident = new Map();
+const hists = new Map();
+
+function seedProjects() {
+  const c = (id, x, y, w, title, content) => ({ id, x, y, w, title, content, type: 'text' });
+  return [
+    { id: 'proj-core', name: 'Полотно / ядро',
+      cards: [
+        c('core-1', -100, -40, 360, 'Полотно', 'Бесконечный причинно-семантический холст. Общая картина и детали видны сразу, режимы переключать не надо.'),
+        c('core-2', -660, -150, 320, 'Отличие от заметочников', 'Обычные инструменты показывают либо детали, либо общую картину. Тут обе лежат на одной поверхности.'),
+        c('core-3', -680, 170, 340, 'Бесконечный семантический холст', 'Главная сцена — бесконечная карта проекта. По ней можно летать как по Google Maps или Figma: контекст на месте, между страницами прыгать не надо.'),
+        c('core-4', -120, 290, 340, 'Семантический зум', 'Издалека виден весь проект как структура. На среднем зуме рабочие карточки и связи. Вблизи полные тексты, медиа и детали прямо на холсте.'),
+        c('core-5', 400, -110, 340, 'Связи как нервная система', 'Главный тип связи причинно-следственный: А требует Б, Б зависит от В, В ведёт к Г. Другие типы возможны, но основа у всего причинность.'),
+        c('core-6', 400, 230, 340, 'Добавление быстрее мысли', 'Ctrl+V вставляет текст, картинки и ссылки прямо на холст. Двойной клик создаёт пустую карточку, YouTube встраивается сам. Чем меньше трения, тем лучше.'),
+        c('core-7', -40, -330, 330, 'Без корпоративной чуши', 'Второй мозг одного человека. Совместного доступа, навязчивого шаринга, канбана ради канбана и корпоративной помойки здесь нет.'),
+        c('core-8', -1080, 60, 300, 'Один проект, одно полотно', 'Каждый проект живёт на своём полотне как отдельный мир. Внутри можно делать группы, снимки видов и нелинейные структуры, никакая схема не навязана.'),
+        c('core-9', 820, 90, 340, 'Контент любого типа', 'Текст, картинки, локальные видео, аудио, PDF, ссылки, YouTube и любые файлы должны жить прямо на холсте, без десятка сторонних окон.')
+      ],
+      edges: [
+        { from: 'core-2', to: 'core-1', label: 'объясняет отличие' }, { from: 'core-3', to: 'core-1', label: 'задаёт основу' },
+        { from: 'core-4', to: 'core-3', label: 'делает холст удобным' }, { from: 'core-5', to: 'core-1', label: 'держит всё вместе' },
+        { from: 'core-6', to: 'core-1', label: 'снимает трение' }, { from: 'core-7', to: 'core-1', label: 'очищает от мусора' },
+        { from: 'core-8', to: 'core-3', label: 'масштабирует идею' }, { from: 'core-9', to: 'core-3', label: 'наполняет холст' }
+      ] },
+    { id: 'proj-tech', name: 'Полотно / реализация',
+      cards: [
+        c('tech-1', -90, -30, 340, 'Один кодбейс', 'Веб-версия, десктоп и мобильный вариант должны собираться из одного ядра. Три разных проекта с тройной болью мне не нужны.'),
+        c('tech-2', -680, -120, 320, 'Canvas/WebGL ядро', 'Большой холст с инерцией и зумом не стоит строить на DOM-элементах. Нужен слой отрисовки, который потянет большие объёмы и плавную навигацию.'),
+        c('tech-3', 380, -170, 300, 'Tauri для десктопа', 'Десктопная версия должна быть быстрой и лёгкой, без электронного мусора и браузерного ожирения.'),
+        c('tech-4', 390, 150, 320, 'Android-версия', 'Мобильная версия нужна урезанная, но живая: палец вместо мыши, то же пространство, зоны нажатия крупнее.'),
+        c('tech-5', -120, 270, 340, 'SQLite / IndexedDB', 'Хранение локальное, сервер не обязателен. На десктопе и телефоне локальная база, в вебе локальное хранилище браузера.'),
+        c('tech-6', -740, 220, 300, 'Эвристики связей', 'Первой версии автоподсказок ИИ-магия не нужна. Хватит общих слов, совпадений тегов, времени добавления и поведения пользователя.'),
+        c('tech-7', 800, -10, 320, 'Плагинная система', 'Позже можно дать расширяемый API под новые типы контента, визуализации и интеграции. Ядро при этом остаётся целым.'),
+        c('tech-8', 800, 270, 320, 'Импорт / экспорт', 'Между устройствами всё переносится одним файлом данных. Облако и сервер не нужны, паники с синхронизацией нет.'),
+        c('tech-9', -1140, 30, 300, 'Локальная LLM, опционально', 'Умные неочевидные связи могут появиться позже как дополнительный режим. Первая рабочая версия от него не зависит.')
+      ],
+      edges: [
+        { from: 'tech-2', to: 'tech-1', label: 'делает единый холст возможным' }, { from: 'tech-3', to: 'tech-1', label: 'даёт десктопное тело' },
+        { from: 'tech-4', to: 'tech-1', label: 'добавляет платформы' }, { from: 'tech-5', to: 'tech-1', label: 'даёт автономность' },
+        { from: 'tech-6', to: 'tech-2', label: 'добавляет семантику' }, { from: 'tech-7', to: 'tech-1', label: 'оставляет место для роста' },
+        { from: 'tech-8', to: 'tech-5', label: 'делает систему переносимой' }, { from: 'tech-9', to: 'tech-6', label: 'может усилить позже' }
+      ] },
+    { id: 'proj-rollout', name: 'Полотно / этапы',
+      cards: [
+        c('roll-1', -1180, -20, 280, 'Этап 1: ядро', 'Бесконечный канвас, зум, инерция, текст и картинки, ручные связи, вставка из буфера. Веб-прототип, чтобы пощупать идею.'),
+        c('roll-2', -780, 70, 280, 'Этап 2: типы контента', 'Видео, YouTube, файлы, PDF, группы, снимки видов, навигация получше и приятность в работе.'),
+        c('roll-3', -380, -30, 280, 'Этап 3: умные связи', 'Подсказки по неочевидным связям на эвристиках. Обязательной зависимости от нейросетей нет.'),
+        c('roll-4', 20, 70, 280, 'Этап 4: другие виды', 'Таймлайн, граф, сетка карточек, облако тегов, список. Это вторичные режимы, холст они не заменяют.'),
+        c('roll-5', 420, -30, 280, 'Этап 5: десктоп', 'Упаковка в десктопное приложение: из веб-прототипа получается инструмент.'),
+        c('roll-6', 820, 70, 280, 'Этап 6: веб-встраивание', 'Урезанная веб-версия для встраивания в сайты и публичных демонстраций, без локального богатства.'),
+        c('roll-7', 1220, -30, 280, 'Этап 7: плагины и локальная LLM', 'Позднее расширение: плагины, локальные модели, более хитрые режимы анализа и визуализации.'),
+        c('roll-8', -100, -290, 320, 'Критерий живого ядра', 'Если проект уже виден целиком, можно приблизиться до деталей, быстро накидать материалы и связать их причинно, ядро живо.')
+      ],
+      edges: [
+        { from: 'roll-1', to: 'roll-2', label: 'после рабочего ядра' }, { from: 'roll-2', to: 'roll-3', label: 'когда среда уже живая' },
+        { from: 'roll-3', to: 'roll-4', label: 'усложняет чтение' }, { from: 'roll-4', to: 'roll-5', label: 'готовит упаковку' },
+        { from: 'roll-5', to: 'roll-6', label: 'даёт публичную форму' }, { from: 'roll-6', to: 'roll-7', label: 'открывает рост' },
+        { from: 'roll-8', to: 'roll-1', label: 'проверка на живость' }
+      ] },
+    { id: 'proj-kobyla', name: 'Полотно / KOBYLA route',
+      cards: [
+        c('kob-1', -40, -20, 350, 'Как это встраивается в kobyla.by', 'Полотно не должно лежать просто файлом. Оно должно жить как центральный артефакт, связанный с заметками, хронологией и лабораторией.'),
+        c('kob-2', -580, -170, 320, 'Запись в XP', 'В артефактах Полотно лежит как системный объект: концепт, активная разработка, инструмент для второго мозга.'),
+        c('kob-3', 400, -170, 320, 'Особая страница артефакта', 'Из XP переход ведёт на особую страницу вместо сухой карточки. Она отчасти работает как сам инструмент.'),
+        c('kob-4', -580, 200, 320, 'Связи с заметками', 'Из стенки заметок к нему должны вести бумажки про второй мозг, причинность, нелинейное мышление и ненависть к корпоративной чуши.'),
+        c('kob-5', 400, 220, 320, 'Связи с хронологией', 'В хронологии это следствие рабочего выгорания, любви к картам и появления второго мозга как ускорителя форм.'),
+        c('kob-6', 860, 20, 320, 'Продолжение в лаборатории', 'Если разработка прототипа пойдёт, следующие модули могут жить в `lab` отдельными шагами установки: canvas, zoom, routes, paste-anything.'),
+        c('kob-7', -60, -320, 340, 'Чем силён этот артефакт', 'Он показывает, как я проектирую сложные интерфейсы, внешнее мышление и пространство причин.')
+      ],
+      edges: [
+        { from: 'kob-7', to: 'kob-1', label: 'объясняет значимость' }, { from: 'kob-2', to: 'kob-1', label: 'точка входа' },
+        { from: 'kob-3', to: 'kob-1', label: 'как показывать' }, { from: 'kob-4', to: 'kob-1', label: 'питает контекстом' },
+        { from: 'kob-5', to: 'kob-1', label: 'встраивает в историю' }, { from: 'kob-6', to: 'kob-1', label: 'открывает развитие' }
+      ] }
+  ];
+}
+
+function normalize(p) {
+  p.cards = Array.isArray(p.cards) ? p.cards : [];
+  p.edges = Array.isArray(p.edges) ? p.edges : [];
+  p.id = p.id || genId();
+  p.name = p.name || 'Без названия';
+  const ids = new Set();
+  p.cards = p.cards.filter(c => c && c.id && !ids.has(c.id) && ids.add(c.id)).map(c => {
+    if (!TYPES[c.type]) c.type = 'text';
+    c.x = +c.x || 0; c.y = +c.y || 0; c.w = clamp(+c.w || TYPES[c.type].w, 200, 1200);
+    c.title = c.title == null ? '' : String(c.title);
+    c.content = c.content == null ? '' : String(c.content);
+    return c;
+  });
+  p.edges = p.edges.filter(e => e && ids.has(e.from) && ids.has(e.to) && e.from !== e.to).map(e => { e.id = e.id || genId(); e.label = e.label || ''; return e; });
+  // группы необязательны: старые файлы без них читаются как раньше
+  const gids = new Set();
+  p.groups = (Array.isArray(p.groups) ? p.groups : []).filter(g => g && g.id && !gids.has(g.id) && gids.add(g.id)).map(g => ({ id: String(g.id), title: g.title == null ? '' : String(g.title) }));
+  const used = new Set();
+  for (const c of p.cards) { if (c.group != null && gids.has(c.group)) used.add(c.group); else delete c.group; }
+  p.groups = p.groups.filter(g => used.has(g.id));
+  return p;
+}
+function load(raw) {
+  let d = null;
+  try { d = JSON.parse(raw); } catch (e) { d = null; }
+  if (d && Array.isArray(d.projects) && d.projects.length) {
+    S.projects = d.projects.map(normalize);
+    S.pid = S.projects.some(p => p.id === d.currentProject) ? d.currentProject : S.projects[0].id;
+  } else if (d && Array.isArray(d.cards)) {
+    S.projects = [normalize({ id: genId(), name: 'Основной проект', cards: d.cards, edges: d.edges || [] })];
+    S.pid = S.projects[0].id;
+  } else {
+    S.projects = seedProjects().map(normalize);
+    S.pid = S.projects[0].id;
+  }
+  P = S.projects.find(p => p.id === S.pid);
+}
+
+/* ---------- сохранение ---------- */
+let saveT = 0;
+function setStatus(kind, text) {
+  saveEl.className = 'save' + (kind ? ' ' + kind : '');
+  $('.lb', saveEl).textContent = text;
+}
+function workspace() {
+  return { version: 'kobyla-polotno-v041', exportedAt: new Date().toISOString(), projects: S.projects, currentProject: S.pid };
+}
+const stripPriv = (k, v) => (typeof k === 'string' && k.charCodeAt(0) === 95 ? undefined : v);
+// на десктопе пишем в файл на диске; записи идут строго по очереди, последняя побеждает
+let diskQ = Promise.resolve();
+function persist() {
+  clearTimeout(saveT); saveT = 0;
+  if (P) P.view = { x: target.x, y: target.y, scale: target.s };
+  if (DESK) {
+    const data = JSON.stringify(workspace(), stripPriv);
+    diskQ = diskQ.then(() => invoke('save_workspace', { data }))
+      .then(() => { if (!saveT) setStatus('', 'сохранено'); return true; })
+      .catch(err => { setStatus('err', 'не сохранилось, скачай файл'); console.error(err); return false; });
+    return diskQ;
+  }
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(workspace(), stripPriv));
+    setStatus('', 'сохранено');
+    return true;
+  } catch (e) {
+    setStatus('err', 'не влезло в память браузера, скачай JSON');
+    return false;
+  }
+}
+function touch() {
+  setStatus('busy', 'сохраняю…');
+  clearTimeout(saveT); saveT = setTimeout(persist, 400);
+  mmDirty = true; schedule(); updateGroupBtns();
+  emptyEl.classList.toggle('on', !P.cards.length);
+}
+addEventListener('pagehide', () => { if (saveT) persist(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && saveT) persist(); });
+
+/* ---------- история ---------- */
+const cl = o => { const r = {}; for (const k in o) if (k.charCodeAt(0) !== 95) r[k] = o[k]; return r; };
+const snap = () => ({ cards: P.cards.map(cl), edges: P.edges.map(cl), groups: P.groups.map(cl) });
+const hist = () => { let h = hists.get(P.id); if (!h) hists.set(P.id, h = { undo: [], redo: [] }); return h; };
+function checkpoint(pre) {
+  const h = hist(); h.undo.push(pre || snap());
+  if (h.undo.length > 100) h.undo.shift();
+  h.redo.length = 0; updateHistBtns();
+}
+function updateHistBtns() {
+  const h = hist(); $('#undoBtn').disabled = !h.undo.length; $('#redoBtn').disabled = !h.redo.length;
+}
+function restore(s) {
+  endEdit(); endGroupEdit(true);
+  P.cards = s.cards.map(cl); P.edges = s.edges.map(cl); P.groups = (s.groups || []).map(cl);
+  const ids = new Set(P.cards.map(c => c.id));
+  sel = new Set([...sel].filter(i => ids.has(i)));
+  if (selEdge && !P.edges.some(e => e.id === selEdge)) selEdge = null;
+  if (selGroup && !P.groups.some(g => g.id === selGroup)) selGroup = null;
+  renderAll(); touch(); updateHistBtns();
+}
+function undo() { const h = hist(); if (!h.undo.length) return; h.redo.push(snap()); restore(h.undo.pop()); }
+function redo() { const h = hist(); if (!h.redo.length) return; h.undo.push(snap()); restore(h.redo.pop()); }
+
+/* ---------- markdown (без внешних библиотек) ---------- */
+function inline(s) {
+  s = esc(s);
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (m, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  return s.replace(/\u0000(\d+)\u0000/g, (m, i) => '<code>' + codes[+i] + '</code>');
+}
+function renderMarkdown(src) {
+  const lines = String(src || '').replace(/\r/g, '').split('\n');
+  const out = []; let para = [], list = null;
+  const fp = () => { if (para.length) { out.push('<p>' + inline(para.join(' ')) + '</p>'); para = []; } };
+  const fl = () => { if (list) { out.push('<' + list.t + '>' + list.items.map(x => '<li>' + inline(x) + '</li>').join('') + '</' + list.t + '>'); list = null; } };
+  for (let i = 0; i < lines.length; i++) {
+    const ln = lines[i]; let m;
+    if (/^```/.test(ln)) { fp(); fl(); const code = []; i++; while (i < lines.length && !/^```/.test(lines[i])) code.push(lines[i++]); out.push('<pre><code>' + esc(code.join('\n')) + '</code></pre>'); continue; }
+    if ((m = ln.match(/^(#{1,3})\s+(.*)$/))) { fp(); fl(); out.push('<h' + m[1].length + '>' + inline(m[2]) + '</h' + m[1].length + '>'); continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(ln)) { fp(); fl(); out.push('<hr>'); continue; }
+    if ((m = ln.match(/^>\s?(.*)$/))) { fp(); fl(); out.push('<blockquote>' + inline(m[1]) + '</blockquote>'); continue; }
+    if ((m = ln.match(/^\s*[-*+]\s+(.*)$/))) { fp(); if (!list || list.t !== 'ul') { fl(); list = { t: 'ul', items: [] }; } list.items.push(m[1]); continue; }
+    if ((m = ln.match(/^\s*\d+[.)]\s+(.*)$/))) { fp(); if (!list || list.t !== 'ol') { fl(); list = { t: 'ol', items: [] }; } list.items.push(m[1]); continue; }
+    if (!ln.trim()) { fp(); fl(); continue; }
+    fl(); para.push(ln.trim());
+  }
+  fp(); fl();
+  return out.join('');
+}
+
+/* ---------- карточки: DOM ---------- */
+const ro = new ResizeObserver(entries => {
+  for (const en of entries) {
+    const c = cardMap.get(en.target.dataset.id); if (!c) continue;
+    const h = en.borderBoxSize && en.borderBoxSize[0] ? en.borderBoxSize[0].blockSize : en.contentRect.height;
+    if (h && Math.abs(h - (c._h || 0)) > 0.5) { c._h = h; dirtyCards.add(c.id); }
+  }
+  if (dirtyCards.size) schedule();
+});
+const dirtyCards = new Set();
+const estH = c => c._h || 140;
+const setPos = (c, el) => { el.style.transform = 'translate(' + c.x + 'px,' + c.y + 'px)'; };
+
+function bodyHTML(c) {
+  switch (c.type) {
+    case 'markdown': return '<div class="c-md" data-field="content" spellcheck="false">' + renderMarkdown(c.content) + '</div>';
+    case 'image': return '<img src="' + esc(c.content) + '" alt="" decoding="async" draggable="false">';
+    case 'video': return '<video src="' + esc(c.content) + '" controls preload="metadata"></video>';
+    case 'audio': return '<audio src="' + esc(c.content) + '" controls preload="metadata"></audio>';
+    case 'youtube': return '<div class="c-yt" data-yt="' + esc(c.content) + '"><img src="https://i.ytimg.com/vi/' + esc(c.content) + '/hqdefault.jpg" alt="" loading="lazy" draggable="false"><div class="play"></div></div>';
+    case 'link': return '<a class="c-link" href="' + esc(c.content) + '" target="_blank" rel="noopener noreferrer">' + ICON.ext + '<span class="u">' + esc(c.content) + '</span></a>';
+    case 'file': return c.content && c.content.indexOf('data:') === 0
+      ? '<a class="c-file" href="' + esc(c.content) + '" download="' + esc(c.filename || 'file') + '">' + ICON.file + '<span class="u">' + esc(c.filename || 'Файл') + '</span></a>'
+      : '<div class="c-file">' + ICON.file + '<span class="u">' + esc(c.filename || 'Файл') + '</span></div>';
+    default: return '<div class="c-text" data-field="content" spellcheck="false">' + esc(c.content) + '</div>';
+  }
+}
+function cardHTML(c) {
+  const T = TYPES[c.type];
+  const textual = c.type === 'text' || c.type === 'markdown';
+  return '<div class="c-head"><span class="c-type"><i></i>' + T.label + '</span><span class="c-acts">'
+    + '<button class="c-act del" data-act="del" aria-label="Удалить карточку" title="Удалить">' + ICON.x + '</button></span></div>'
+    + '<div class="c-title" data-field="title" data-ph="Без названия" spellcheck="false">' + esc(c.title) + '</div>'
+    + '<div class="c-body' + (textual ? ' clamp' : '') + '">' + bodyHTML(c) + '</div>'
+    + (textual ? '<button class="c-more" data-act="more">Развернуть</button>' : '')
+    + '<div class="c-far"><span>' + esc(c.title || TYPES[c.type].label) + '</span></div>'
+    + '<i class="port" data-side="t"></i><i class="port" data-side="r"></i><i class="port" data-side="b"></i><i class="port" data-side="l"></i>'
+    + '<i class="c-rs" title="Потяни: размер. Двойной клик: по содержимому"></i>';
+}
+function mountCard(c) {
+  const el = document.createElement('div');
+  el.className = 'card t-' + c.type + (c.expanded ? ' expanded' : '') + (c.customHeight ? ' fixed-h' : '');
+  el.dataset.id = c.id;
+  el.style.width = c.w + 'px';
+  if (c.customHeight) el.style.height = c.customHeight + 'px';
+  el.innerHTML = cardHTML(c);
+  setPos(c, el);
+  cardsLayer.appendChild(el);
+  cardEls.set(c.id, el); cardMap.set(c.id, c); c._cull = false;
+  if (sel.has(c.id)) el.classList.add('sel');
+  ro.observe(el);
+  return el;
+}
+function unmountCard(id) {
+  const el = cardEls.get(id); if (el) { ro.unobserve(el); el.remove(); }
+  cardEls.delete(id); cardMap.delete(id);
+}
+function refreshCardBody(c) {
+  const el = cardEls.get(c.id); if (!el) return;
+  $('.c-body', el).innerHTML = bodyHTML(c);
+  $('.c-far span', el).textContent = c.title || TYPES[c.type].label;
+  measureMore(el, c);
+}
+function measureMore(el, c) {
+  const body = $('.c-body', el); if (!body || !el.querySelector('.c-more')) return;
+  const inner = body.firstElementChild;
+  const need = !!c.customHeight || (inner && inner.scrollHeight > 154) || c.expanded;
+  el.classList.toggle('has-more', !!need && !c.customHeight);
+  body.classList.toggle('clamp', !c.expanded && !c.customHeight);
+  $('.c-more', el).textContent = c.expanded ? 'Свернуть' : 'Развернуть';
+}
+
+/* ---------- связи ---------- */
+let arrowBucket = 0, inv = 1;
+const sideNormal = { t: [0, -1], b: [0, 1], l: [-1, 0], r: [1, 0] };
+function anchor(c, side) {
+  const h = estH(c);
+  return side === 't' ? [c.x + c.w / 2, c.y] : side === 'b' ? [c.x + c.w / 2, c.y + h] : side === 'l' ? [c.x, c.y + h / 2] : [c.x + c.w, c.y + h / 2];
+}
+function pickSides(a, b) {
+  const ha = estH(a), hb = estH(b);
+  const dx = (b.x + b.w / 2) - (a.x + a.w / 2), dy = (b.y + hb / 2) - (a.y + ha / 2);
+  const nx = Math.abs(dx) / ((a.w + b.w) / 2), ny = Math.abs(dy) / ((ha + hb) / 2);
+  return nx >= ny ? (dx >= 0 ? ['r', 'l'] : ['l', 'r']) : (dy >= 0 ? ['b', 't'] : ['t', 'b']);
+}
+function mountEdge(e) {
+  const g = document.createElementNS(NS, 'g');
+  g.setAttribute('class', 'edge'); g.dataset.id = e.id;
+  const line = document.createElementNS(NS, 'path'); line.setAttribute('class', 'e-line');
+  const arrow = document.createElementNS(NS, 'path'); arrow.setAttribute('class', 'e-arrow');
+  const hit = document.createElementNS(NS, 'path'); hit.setAttribute('class', 'e-hit');
+  g.append(line, arrow, hit); edgeLayer.appendChild(g);
+  const lab = document.createElement('div');
+  lab.className = 'elabel'; lab.dataset.id = e.id;
+  lab.innerHTML = '<span class="t" data-ph="подпись" spellcheck="false"></span><button class="ex" aria-label="Удалить связь" title="Удалить связь">' + ICON.x + '</button>';
+  $('.t', lab).textContent = e.label || '';
+  lab.classList.toggle('empty', !e.label);
+  labelsLayer.appendChild(lab);
+  edgeEls.set(e.id, { g, line, arrow, hit, lab });
+  e._cull = false;
+  layoutEdge(e);
+}
+function layoutEdge(e) {
+  const o = edgeEls.get(e.id), a = cardMap.get(e.from), b = cardMap.get(e.to);
+  if (!o || !a || !b) return;
+  const [sa, sb] = pickSides(a, b);
+  const p0 = anchor(a, sa), p3 = anchor(b, sb), na = sideNormal[sa], nb = sideNormal[sb];
+  const dist = Math.hypot(p3[0] - p0[0], p3[1] - p0[1]);
+  const k = clamp(dist * 0.32, 24, 220);
+  const al = Math.min(11 * inv, dist * 0.45);
+  const pe = [p3[0] + nb[0] * al, p3[1] + nb[1] * al];
+  const c1 = [p0[0] + na[0] * k, p0[1] + na[1] * k], c2 = [pe[0] + nb[0] * k, pe[1] + nb[1] * k];
+  const d = 'M' + p0[0] + ' ' + p0[1] + 'C' + c1[0] + ' ' + c1[1] + ' ' + c2[0] + ' ' + c2[1] + ' ' + pe[0] + ' ' + pe[1];
+  o.line.setAttribute('d', d); o.hit.setAttribute('d', d);
+  const ux = -nb[0], uy = -nb[1], hw = al * 0.45;
+  o.arrow.setAttribute('d', 'M' + p3[0] + ' ' + p3[1] + 'L' + (pe[0] - uy * hw) + ' ' + (pe[1] + ux * hw) + 'L' + (pe[0] + uy * hw) + ' ' + (pe[1] - ux * hw) + 'Z');
+  // середина кривой для подписи (приблизительно по контрольным точкам исходной кривой)
+  const t = 0.5, mt = 1 - t;
+  const mx = mt * mt * mt * p0[0] + 3 * mt * mt * t * c1[0] + 3 * mt * t * t * c2[0] + t * t * t * pe[0];
+  const my = mt * mt * mt * p0[1] + 3 * mt * mt * t * c1[1] + 3 * mt * t * t * c2[1] + t * t * t * pe[1];
+  o.lx = mx; o.ly = my;
+  o.lab.style.transform = 'translate(' + mx + 'px,' + my + 'px) scale(' + inv + ') translate(-50%,-50%)';
+  e._bb = [Math.min(p0[0], p3[0], c1[0], c2[0]), Math.min(p0[1], p3[1], c1[1], c2[1]), Math.max(p0[0], p3[0], c1[0], c2[0]), Math.max(p0[1], p3[1], c1[1], c2[1])];
+}
+function indexEdges() {
+  incident.clear();
+  for (const e of P.edges) for (const id of [e.from, e.to]) { let s = incident.get(id); if (!s) incident.set(id, s = new Set()); s.add(e); }
+}
+function setEdgeLabelText(e) {
+  const o = edgeEls.get(e.id); if (!o) return;
+  $('.t', o.lab).textContent = e.label || '';
+  o.lab.classList.toggle('empty', !e.label);
+}
+
+/* ---------- группы (рамки) ----------
+   Данные: P.groups = [{ id, title }], у карточки необязательное поле group = id группы.
+   Рамка не хранит геометрию: это габарит карточек группы плюс отступ. */
+const GPAD = 28;
+const gById = id => P.groups.find(g => g.id === id);
+function indexGroups() {
+  gMembers.clear();
+  for (const c of P.cards) if (c.group) { let a = gMembers.get(c.group); if (!a) gMembers.set(c.group, a = []); a.push(c); }
+}
+function groupRect(g) {
+  const m = gMembers.get(g.id); if (!m || !m.length) return null;
+  const b = bounds(m);
+  return { x: b.x0 - GPAD, y: b.y0 - GPAD, w: b.x1 - b.x0 + 2 * GPAD, h: b.y1 - b.y0 + 2 * GPAD };
+}
+function mountGroup(g, isNew) {
+  const el = document.createElement('div');
+  el.className = 'gf' + (isNew ? ' new' : '') + (selGroup === g.id ? ' sel' : ''); el.dataset.id = g.id;
+  el.innerHTML = '<div class="g-box"></div><i class="g-h t"></i><i class="g-h r"></i><i class="g-h b"></i><i class="g-h l"></i>'
+    + '<div class="g-tab"><span class="g-title" data-ph="Группа" spellcheck="false"></span><span class="g-n"></span>'
+    + '<button class="g-x" aria-label="Разгруппировать" title="Разгруппировать">' + ICON.ungroup + '</button></div>';
+  const title = $('.g-title', el); title.textContent = g.title || '';
+  groupsLayer.appendChild(el);
+  groupEls.set(g.id, { el, title, n: $('.g-n', el), w: -1, h: -1, cnt: -1 });
+  refitGroup(g);
+}
+function placeGroup(g) {
+  const o = groupEls.get(g.id); if (!o || !g._r) return;
+  o.el.style.transform = 'translate(' + g._r.x + 'px,' + g._r.y + 'px)';
+}
+function refitGroup(g) {
+  const r = groupRect(g); g._r = r;
+  const o = groupEls.get(g.id); if (!o || !r) return;
+  placeGroup(g);
+  if (o.w !== r.w) { o.w = r.w; o.el.style.width = r.w + 'px'; }
+  if (o.h !== r.h) { o.h = r.h; o.el.style.height = r.h + 'px'; }
+  const n = gMembers.get(g.id).length;
+  if (o.cnt !== n) { o.cnt = n; o.n.textContent = n; }
+}
+function refitGroups() { P.groups.forEach(refitGroup); mmDirty = true; }
+function unmountGroup(id) { const o = groupEls.get(id); if (o) o.el.remove(); groupEls.delete(id); }
+// убирает группы без карточек
+function pruneGroups() {
+  let ch = false;
+  P.groups = P.groups.filter(g => {
+    const m = gMembers.get(g.id);
+    if (m && m.length) return true;
+    unmountGroup(g.id); if (selGroup === g.id) selGroup = null; ch = true; return false;
+  });
+  return ch;
+}
+function updateGroupBtns() {
+  $('#groupBtn').disabled = !sel.size;
+  $('#ungroupBtn').disabled = !(selGroup || [...sel].some(id => { const c = cardMap.get(id); return c && c.group; }));
+}
+function groupSel() {
+  const ids = [...sel].filter(id => cardMap.has(id));
+  if (!ids.length) { toast('Сначала выдели карточки'); return; }
+  endEdit(); endGroupEdit(false);
+  checkpoint();
+  const g = { id: genId(), title: '', _fresh: true };
+  P.groups.push(g);
+  for (const id of ids) cardMap.get(id).group = g.id;
+  indexGroups(); pruneGroups();
+  mountGroup(g, true); refitGroups();
+  setSel(ids, null, g.id); touch();
+  requestAnimationFrame(() => startGroupEdit(g, true));
+}
+function ungroup(ids) {
+  const set = new Set(ids.filter(id => P.groups.some(g => g.id === id)));
+  if (!set.size) return false;
+  endGroupEdit(false);
+  checkpoint();
+  for (const c of P.cards) if (set.has(c.group)) delete c.group;
+  indexGroups(); pruneGroups(); refitGroups();
+  setSel([...sel]); touch();
+  return true;
+}
+function ungroupSel() {
+  const ids = new Set(); if (selGroup) ids.add(selGroup);
+  for (const id of sel) { const c = cardMap.get(id); if (c && c.group) ids.add(c.group); }
+  if (!ungroup([...ids])) { toast('В выделении нет групп'); return; }
+  toast('Разгруппировано', 'Вернуть', undo);
+}
+let groupEdit = null;
+function startGroupEdit(g, selectAll) {
+  const o = g && groupEls.get(g.id); if (!o || o.title.isContentEditable) return;
+  endEdit(); endEdgeEdit(false); endGroupEdit(false);
+  const t = o.title;
+  groupEdit = { g, t, orig: g.title };
+  try { t.contentEditable = 'plaintext-only'; if (t.contentEditable !== 'plaintext-only') t.contentEditable = 'true'; } catch (_) { t.contentEditable = 'true'; }
+  t.focus();
+  const r = document.createRange(); r.selectNodeContents(t); if (!selectAll) r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function endGroupEdit(cancel) {
+  const ed = groupEdit; if (!ed) return; groupEdit = null;
+  const v = cancel ? ed.orig : ed.t.textContent.replace(/\s+/g, ' ').trim();
+  ed.t.removeAttribute('contenteditable'); getSelection().removeAllRanges();
+  if (v !== ed.orig) { if (!ed.g._fresh) checkpoint(); ed.g.title = v; touch(); }
+  delete ed.g._fresh;
+  ed.t.textContent = ed.g.title;
+}
+document.addEventListener('focusout', e => { if (groupEdit && e.target === groupEdit.t) endGroupEdit(false); });
+document.addEventListener('keydown', e => {
+  if (!groupEdit || e.target !== groupEdit.t) return;
+  if (e.key === 'Enter') { e.preventDefault(); groupEdit.t.blur(); }
+  else if (e.key === 'Escape') { e.preventDefault(); endGroupEdit(true); }
+  e.stopPropagation();
+}, true);
+// подсказка при перетаскивании: куда попадёт каждая карточка и откуда уйдёт
+function updateDragTargets(d) {
+  const tg = d.tg = new Map(), drop = new Set(), leave = new Set();
+  const inR = (r, x, y) => r && x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+  for (const it of d.items) {
+    const c = it.c, cx = c.x + c.w / 2, cy = c.y + estH(c) / 2, cur = c.group ? gById(c.group) : null;
+    let best = null, ba = Infinity;
+    if (cur && inR(cur._r, cx, cy)) best = cur;
+    else for (const g of P.groups) { const r = g._r; if (inR(r, cx, cy) && r.w * r.h < ba) { best = g; ba = r.w * r.h; } }
+    tg.set(c.id, best);
+    const bid = best ? best.id : null;
+    if (bid !== (c.group || null)) { if (bid) drop.add(bid); if (c.group) leave.add(c.group); }
+  }
+  const hl = d.hl || (d.hl = { drop: new Set(), leave: new Set() });
+  for (const [k, set] of [['drop', drop], ['leave', leave]]) {
+    for (const id of hl[k]) if (!set.has(id)) { const o = groupEls.get(id); if (o) o.el.classList.remove(k); }
+    for (const id of set) if (!hl[k].has(id)) { const o = groupEls.get(id); if (o) o.el.classList.add(k); }
+    hl[k] = set;
+  }
+}
+function clearDragHl(d) {
+  if (!d.hl) return;
+  for (const k of ['drop', 'leave']) for (const id of d.hl[k]) { const o = groupEls.get(id); if (o) o.el.classList.remove(k); }
+  d.hl = null;
+}
+
+/* ---------- полный рендер ---------- */
+function renderAll() {
+  cardsLayer.textContent = ''; edgeLayer.textContent = ''; labelsLayer.textContent = ''; groupsLayer.textContent = '';
+  for (const el of cardEls.values()) ro.unobserve(el);
+  cardEls.clear(); edgeEls.clear(); cardMap.clear(); dirtyCards.clear(); groupEls.clear();
+  P.cards.forEach(mountCard);
+  for (const c of P.cards) c._h = cardEls.get(c.id).offsetHeight || c._h;
+  indexEdges();
+  P.edges.forEach(mountEdge);
+  for (const c of P.cards) measureMore(cardEls.get(c.id), c);
+  indexGroups(); pruneGroups(); P.groups.forEach(g => mountGroup(g, false));
+  refreshHighlights(); updateGroupBtns();
+  if (selEdge) { const o = edgeEls.get(selEdge); if (o) { o.g.classList.add('sel'); o.lab.classList.add('sel'); } }
+  arrowBucket = NaN; shownS = -1; forceView = true; mmDirty = true; schedule();
+  emptyEl.classList.toggle('on', !P.cards.length);
+  projName.textContent = P.name;
+  updateHistBtns();
+}
+
+/* ---------- выделение ---------- */
+function setSel(ids, edgeId, groupId) {
+  const ng = groupId || null;
+  if (ng !== selGroup) {
+    if (selGroup) { const o = groupEls.get(selGroup); if (o) o.el.classList.remove('sel'); }
+    selGroup = ng;
+    if (selGroup) { const o = groupEls.get(selGroup); if (o) o.el.classList.add('sel'); }
+  }
+  const next = new Set(ids);
+  for (const id of sel) if (!next.has(id)) { const el = cardEls.get(id); if (el) el.classList.remove('sel'); }
+  for (const id of next) if (!sel.has(id)) { const el = cardEls.get(id); if (el) el.classList.add('sel'); }
+  sel = next;
+  const ne = edgeId || null;
+  if (ne !== selEdge) {
+    if (selEdge) { const o = edgeEls.get(selEdge); if (o) { o.g.classList.remove('sel'); o.lab.classList.remove('sel'); } }
+    selEdge = ne;
+    if (selEdge) { const o = edgeEls.get(selEdge); if (o) { o.g.classList.add('sel'); o.lab.classList.add('sel'); } }
+  }
+  refreshHighlights(); updateGroupBtns();
+}
+function refreshHighlights() {
+  const hl = new Set();
+  for (const id of sel) { const s = incident.get(id); if (s) for (const e of s) hl.add(e.id); }
+  for (const [id, o] of edgeEls) o.g.classList.toggle('hl', hl.has(id));
+}
+let zTop = 10;
+function raise(id) { const el = cardEls.get(id); if (el) el.style.zIndex = ++zTop; }
+
+/* ---------- вид: пан, зум, LOD, culling, minimap ---------- */
+let raf = 0, lastT = 0, forceView = true, mmDirty = true, scaleDirty = true, settleT = 0, lod = 'full', shownS = -1;
+let moveDirty = false;
+const ptr = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
+let nextFrame = 0;
+function schedule() { if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(tick); } }
+function lodFor(s) { return s >= 0.5 ? 'full' : s >= 0.32 ? 'far' : s >= 0.18 ? 'xfar' : 'dot'; }
+function applyView() {
+  world.style.transform = 'translate3d(' + view.x + 'px,' + view.y + 'px,0) scale(' + view.s + ')';
+  if (view.s !== shownS) {
+    shownS = view.s; scaleDirty = true;
+    zoomLabel.textContent = Math.round(view.s * 100) + '%';
+    const nl = lodFor(view.s);
+    if (nl !== lod) { lod = nl; world.className = 'lod-' + lod; hideTip(); }
+    const b = Math.round(Math.log2(view.s) * 4);
+    if (b !== arrowBucket) {
+      arrowBucket = b; inv = Math.pow(2, -b / 4);
+      edgesSvg.style.setProperty('--inv', inv); labelsLayer.style.setProperty('--inv', inv);
+      groupsLayer.style.setProperty('--gi', Math.max(1, inv).toFixed(3));
+      for (const e of P.edges) layoutEdge(e);
+    }
+    clearTimeout(settleT); settleT = setTimeout(reraster, 200);
+  }
+  cull();
+  mmDirty = true;
+}
+function reraster() {
+  // will-change фиксирует разрешение растра; после остановки зума переснимаем в текущем масштабе
+  world.style.willChange = 'auto';
+  requestAnimationFrame(() => requestAnimationFrame(() => { world.style.willChange = 'transform'; }));
+}
+function cull() {
+  const m = 240 / view.s, l = -view.x / view.s - m, t = -view.y / view.s - m, r = l + vw / view.s + 2 * m, b = t + vh / view.s + 2 * m;
+  for (const c of P.cards) {
+    const vis = c.x < r && c.x + c.w > l && c.y < b && c.y + estH(c) > t;
+    if (vis === !c._cull) continue;
+    c._cull = !vis;
+    const el = cardEls.get(c.id); if (el) el.classList.toggle('cull', !vis);
+  }
+  for (const e of P.edges) {
+    const bb = e._bb; if (!bb) continue;
+    const vis = bb[0] < r && bb[2] > l && bb[1] < b && bb[3] > t;
+    if (vis === !e._cull) continue;
+    e._cull = !vis;
+    const o = edgeEls.get(e.id);
+    if (o) { o.g.classList.toggle('cull', !vis); o.lab.classList.toggle('cull', !vis); }
+  }
+}
+function tick(now) {
+  raf = 0;
+  if (!P) return; // данные ещё читаются с диска
+  // потолок 260 FPS: рано для кадра, ждём следующий vsync, не трогая DOM.
+  // Срок копится, поэтому на 360+ Гц выходит в среднем ровно 260, а на 260 Гц кадры не теряются
+  if (now < nextFrame - 1) { raf = requestAnimationFrame(tick); return; }
+  nextFrame = Math.max(nextFrame + FRAME_MS, now);
+  const dt = clamp(now - lastT, 1, 64) / 1000; lastT = now;
+  let more = false;
+  if (moveDirty) { moveDirty = false; applyDrag(); }
+  if (view.x !== target.x || view.y !== target.y || view.s !== target.s) {
+    const k = reduced ? 1 : 1 - Math.exp(-dt * 20);
+    const step = (a, b) => (Math.abs(b - a) < 0.01 ? b : a + (b - a) * k);
+    view.x = step(view.x, target.x); view.y = step(view.y, target.y);
+    view.s = Math.abs(target.s - view.s) < 0.0004 ? target.s : view.s + (target.s - view.s) * k;
+    forceView = true;
+    more = view.x !== target.x || view.y !== target.y || view.s !== target.s;
+  }
+  if (forceView) { forceView = false; applyView(); }
+  if (dirtyCards.size) {
+    const moved = new Set(), regs = new Set();
+    for (const id of dirtyCards) {
+      const s = incident.get(id); if (s) for (const e of s) moved.add(e);
+      const c = cardMap.get(id); if (c && c.group) regs.add(c.group);
+    }
+    dirtyCards.clear();
+    for (const e of moved) layoutEdge(e);
+    for (const gid of regs) { const g = gById(gid); if (g) refitGroup(g); }
+    cull(); mmDirty = true;
+  }
+  if (tipFor) placeTip();
+  if (mmDirty) { mmDirty = false; drawMinimap(); }
+  if (more || drag) { if (more) schedule(); }
+}
+function zoomAt(ax, ay, f) {
+  const ns = clamp(target.s * f, MIN_S, MAX_S), rf = ns / target.s;
+  target.x = ax - (ax - target.x) * rf; target.y = ay - (ay - target.y) * rf; target.s = ns;
+  schedule(); persistSoon();
+}
+function persistSoon() { clearTimeout(saveT); saveT = setTimeout(persist, 800); }
+function jumpView(x, y, s, instant) {
+  target.x = x; target.y = y; target.s = s;
+  if (instant || reduced) { view.x = x; view.y = y; view.s = s; forceView = true; }
+  schedule(); persistSoon();
+}
+function bounds(cards) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const c of cards) { x0 = Math.min(x0, c.x); y0 = Math.min(y0, c.y); x1 = Math.max(x1, c.x + c.w); y1 = Math.max(y1, c.y + estH(c)); }
+  return { x0, y0, x1, y1 };
+}
+function fit(cards, instant) {
+  if (!cards.length) { jumpView(vw / 2, vh / 2, 1, instant); return; }
+  const b = bounds(cards), bw = Math.max(1, b.x1 - b.x0), bh = Math.max(1, b.y1 - b.y0);
+  const top = 76, pad = 48, bot = 28;
+  const s = clamp(Math.min((vw - pad * 2) / bw, (vh - top - bot) / bh, 1), MIN_S, MAX_S);
+  jumpView(vw / 2 - (b.x0 + bw / 2) * s, top + (vh - top - bot) / 2 - (b.y0 + bh / 2) * s, s, instant);
+}
+function flyTo(c) {
+  const s = Math.min(1.1, Math.max(0.8, target.s));
+  jumpView(vw / 2 - (c.x + c.w / 2) * s, vh / 2 - (c.y + estH(c) / 2) * s, s);
+}
+const toWorld = (sx, sy) => ({ x: (sx - view.x) / view.s, y: (sy - view.y) / view.s });
+function viewCenterWorld() { return toWorld(vw / 2, vh / 2); }
+new ResizeObserver(() => { vw = viewport.clientWidth; vh = viewport.clientHeight; forceView = true; mmDirty = true; schedule(); }).observe(viewport);
+
+/* minimap */
+const mctx = mmCanvas.getContext('2d');
+const MW = 200, MH = 132;
+{ const dpr = Math.min(2, devicePixelRatio || 1); mmCanvas.width = MW * dpr; mmCanvas.height = MH * dpr; mctx.scale(dpr, dpr); }
+let mm = null;
+const TCOL = { text: '#A3A99A', markdown: '#B5A98A', link: '#8FA3A0', image: '#8C98A6', video: '#A89090', audio: '#9C94A8', youtube: '#A88F7E', file: '#8D8D88' };
+function mmCompute(frozen) {
+  if (frozen) return frozen;
+  const vl = -view.x / view.s, vt = -view.y / view.s, vr = vl + vw / view.s, vb = vt + vh / view.s;
+  let x0 = vl, y0 = vt, x1 = vr, y1 = vb;
+  if (P.cards.length) { const b = bounds(P.cards), gp = P.groups.length ? GPAD : 0; x0 = Math.min(x0, b.x0 - gp); y0 = Math.min(y0, b.y0 - gp); x1 = Math.max(x1, b.x1 + gp); y1 = Math.max(y1, b.y1 + gp); }
+  const pw = (x1 - x0) * 0.06 + 10, ph = (y1 - y0) * 0.06 + 10;
+  x0 -= pw; y0 -= ph; x1 += pw; y1 += ph;
+  const k = Math.min(MW / (x1 - x0), MH / (y1 - y0));
+  return { k, ox: (MW - (x1 - x0) * k) / 2 - x0 * k, oy: (MH - (y1 - y0) * k) / 2 - y0 * k };
+}
+function drawMinimap() {
+  mm = mmCompute(mmFrozen);
+  mctx.clearRect(0, 0, MW, MH);
+  mctx.fillStyle = '#212121'; mctx.fillRect(0, 0, MW, MH);
+  mctx.strokeStyle = 'rgba(245,245,240,.2)'; mctx.lineWidth = 1; mctx.beginPath();
+  for (const e of P.edges) {
+    const a = cardMap.get(e.from), b = cardMap.get(e.to); if (!a || !b) continue;
+    mctx.moveTo((a.x + a.w / 2) * mm.k + mm.ox, (a.y + estH(a) / 2) * mm.k + mm.oy);
+    mctx.lineTo((b.x + b.w / 2) * mm.k + mm.ox, (b.y + estH(b) / 2) * mm.k + mm.oy);
+  }
+  mctx.stroke();
+  for (const g of P.groups) {
+    const r = g._r; if (!r) continue;
+    const gx = r.x * mm.k + mm.ox, gy = r.y * mm.k + mm.oy, gw = Math.max(4, r.w * mm.k), gh = Math.max(4, r.h * mm.k);
+    mctx.fillStyle = selGroup === g.id ? 'rgba(183,255,0,.2)' : 'rgba(183,255,0,.09)'; mctx.fillRect(gx, gy, gw, gh);
+    mctx.strokeStyle = selGroup === g.id ? 'rgba(183,255,0,.95)' : 'rgba(183,255,0,.5)'; mctx.lineWidth = 1;
+    mctx.setLineDash([3, 2]); mctx.strokeRect(gx + .5, gy + .5, gw, gh); mctx.setLineDash([]);
+  }
+  for (const c of P.cards) {
+    mctx.fillStyle = TCOL[c.type] || '#A3A99A';
+    mctx.globalAlpha = sel.has(c.id) ? 1 : 0.8;
+    mctx.fillRect(c.x * mm.k + mm.ox, c.y * mm.k + mm.oy, Math.max(2.5, c.w * mm.k), Math.max(2.5, estH(c) * mm.k));
+  }
+  mctx.globalAlpha = 1;
+  const rx = (-view.x / view.s) * mm.k + mm.ox, ry = (-view.y / view.s) * mm.k + mm.oy, rw = (vw / view.s) * mm.k, rh = (vh / view.s) * mm.k;
+  mctx.fillStyle = 'rgba(183,255,0,.08)'; mctx.fillRect(rx, ry, rw, rh);
+  mctx.strokeStyle = '#B7FF00'; mctx.lineWidth = 1.5; mctx.strokeRect(rx + .5, ry + .5, rw, rh);
+}
+let mmFrozen = null;
+function mmGo(e) {
+  const r = mmCanvas.getBoundingClientRect();
+  const wx = ((e.clientX - r.left) - mm.ox) / mm.k, wy = ((e.clientY - r.top) - mm.oy) / mm.k;
+  view.x = target.x = vw / 2 - wx * view.s; view.y = target.y = vh / 2 - wy * view.s;
+  forceView = true; schedule();
+}
+mmCanvas.addEventListener('pointerdown', e => {
+  if (e.button !== 0) return;
+  mm = mmCompute(null); mmFrozen = mm; mmCanvas.setPointerCapture(e.pointerId); mmGo(e); e.preventDefault();
+});
+mmCanvas.addEventListener('pointermove', e => { if (mmFrozen) mmGo(e); });
+const mmEnd = () => { if (mmFrozen) { mmFrozen = null; mmDirty = true; persistSoon(); schedule(); } };
+mmCanvas.addEventListener('pointerup', mmEnd); mmCanvas.addEventListener('pointercancel', mmEnd);
+
+/* ---------- подсказка на далёких масштабах ---------- */
+let tipFor = null;
+function showTip(c) {
+  tipFor = c;
+  $('.k', tip).textContent = TYPES[c.type].label;
+  $('.h', tip).textContent = c.title || 'Без названия';
+  const pv = c.type === 'text' || c.type === 'markdown' ? c.content : c.type === 'link' || c.type === 'youtube' ? c.content : (c.filename || '');
+  $('.p', tip).textContent = c.type === 'youtube' ? 'youtu.be/' + pv : pv;
+  tip.classList.add('on'); placeTip();
+}
+function hideTip() { tipFor = null; tip.classList.remove('on'); }
+function placeTip() {
+  const x = Math.min(ptr.x + 18, innerWidth - 300), y = Math.min(ptr.y + 14, innerHeight - 140);
+  tip.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+}
+cardsLayer.addEventListener('pointerover', e => {
+  if (lod === 'full' || drag) return;
+  const el = e.target.closest('.card'); if (el) showTip(cardMap.get(el.dataset.id));
+});
+cardsLayer.addEventListener('pointerout', e => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.card')) hideTip(); });
+
+/* ---------- ввод: указатель ---------- */
+let drag = null, spaceDown = false, lastMoved = 0;
+const EDITABLE = '[contenteditable="true"],[contenteditable="plaintext-only"],input,textarea';
+function isEditing() { const a = document.activeElement; return !!(a && a.closest && a.closest(EDITABLE)); }
+
+viewport.addEventListener('pointerdown', e => {
+  if (e.button === 2) return;
+  closePmenu();
+  const t = e.target;
+  const act = document.activeElement;
+  if (act && act !== document.body && act.closest && act.closest(EDITABLE) && !act.contains(t)) act.blur();
+  ptr.x = e.clientX; ptr.y = e.clientY;
+  const cardEl = t.closest && t.closest('.card');
+  const port = t.closest && t.closest('.port');
+  const rs = t.closest && t.closest('.c-rs');
+  const lab = t.closest && t.closest('.elabel');
+  if (lab) return;
+  const gh = !cardEl && t.closest && t.closest('.g-tab,.g-h');
+  if (gh && (t.closest('.g-x') || (t.closest('.g-title') && t.closest('.g-title').isContentEditable))) return;
+  const pan = e.button === 1 || spaceDown;
+  if (port && e.button === 0 && !pan) {
+    const c = cardMap.get(cardEl.dataset.id);
+    drag = { type: 'link', c, side: port.dataset.side, px: e.clientX, py: e.clientY, sx: e.clientX, sy: e.clientY, over: null };
+    viewport.classList.add('linking');
+  } else if (rs && e.button === 0 && !pan) {
+    const c = cardMap.get(cardEl.dataset.id);
+    drag = { type: 'resize', c, el: cardEl, sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, w0: c.w, h0: cardEl.offsetHeight, pre: null, moved: false };
+  } else if (pan) {
+    drag = { type: 'pan', sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, x0: view.x, y0: view.y };
+    target.x = view.x; target.y = view.y; target.s = view.s;
+    viewport.classList.add('panning');
+  } else if (gh && e.button === 0) {
+    // рамка группы: тянем за ярлычок или за край, двигаются все карточки внутри
+    const g = gById(gh.closest('.gf').dataset.id), ms = g && gMembers.get(g.id);
+    if (!g || !ms) return;
+    setSel(ms.map(m => m.id), null, g.id);
+    const items = ms.map(m => ({ c: m, x0: m.x, y0: m.y, el: cardEls.get(m.id) }));
+    const edges = new Set();
+    ms.forEach(m => { const s = incident.get(m.id); if (s) s.forEach(x => edges.add(x)); });
+    drag = { type: 'card', c: null, grp: g, items, edges, sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, moved: false, pre: null, shift: false };
+  } else if (cardEl) {
+    if (t.closest(EDITABLE + ',video,audio,button,a,.c-yt iframe')) return;
+    const c = cardMap.get(cardEl.dataset.id);
+    if (e.shiftKey) { const n = new Set(sel); n.has(c.id) ? n.delete(c.id) : n.add(c.id); setSel(n); if (!n.has(c.id)) return; }
+    else if (!sel.has(c.id)) setSel([c.id]);
+    raise(c.id);
+    const ids = sel.has(c.id) ? [...sel] : [c.id];
+    const items = ids.map(id => ({ c: cardMap.get(id), x0: cardMap.get(id).x, y0: cardMap.get(id).y, el: cardEls.get(id) }));
+    const edges = new Set();
+    ids.forEach(id => { const s = incident.get(id); if (s) s.forEach(x => edges.add(x)); });
+    drag = { type: 'card', c, items, edges, sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, moved: false, pre: null, shift: e.shiftKey };
+  } else if (e.shiftKey && e.button === 0) {
+    drag = { type: 'marquee', sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, base: new Set(sel), moved: false };
+  } else {
+    const hit = t.closest && t.closest('.edge');
+    drag = { type: 'pan', sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, x0: view.x, y0: view.y, bg: true, edge: hit ? hit.dataset.id : null, moved: false };
+    target.x = view.x; target.y = view.y; target.s = view.s;
+  }
+  if (drag) drag.id = e.pointerId;
+});
+addEventListener('pointermove', e => {
+  ptr.x = e.clientX; ptr.y = e.clientY;
+  if (tipFor) { schedule(); }
+  if (!drag || e.pointerId !== drag.id) return;
+  drag.px = e.clientX; drag.py = e.clientY;
+  moveDirty = true; schedule();
+});
+function applyDrag() {
+  const d = drag; if (!d) return;
+  const dx = d.px - d.sx, dy = d.py - d.sy;
+  switch (d.type) {
+    case 'pan': {
+      if (!d.moved && Math.hypot(dx, dy) < 3 && d.bg) return;
+      d.moved = true;
+      view.x = target.x = d.x0 + dx; view.y = target.y = d.y0 + dy; forceView = true;
+      if (d.bg) viewport.classList.add('panning');
+      break;
+    }
+    case 'card': {
+      if (!d.moved) {
+        if (Math.hypot(dx, dy) < 3) return;
+        d.moved = true; d.pre = snap(); hideTip();
+        // рамки, у которых в переносе все карточки, едут целиком; остальные ждут отпускания
+        const ids = new Set(d.items.map(i => i.c.id));
+        d.gmov = [];
+        for (const [gid, ms] of gMembers) if (ms.every(m => ids.has(m.id))) { const g = gById(gid); if (g && g._r) d.gmov.push({ g, x0: g._r.x, y0: g._r.y }); }
+      }
+      const wx = dx / view.s, wy = dy / view.s;
+      for (const it of d.items) { it.c.x = it.x0 + wx; it.c.y = it.y0 + wy; setPos(it.c, it.el); }
+      for (const m of d.gmov) { m.g._r.x = m.x0 + wx; m.g._r.y = m.y0 + wy; placeGroup(m.g); }
+      if (P.groups.length) updateDragTargets(d);
+      for (const e of d.edges) layoutEdge(e);
+      cull(); mmDirty = true;
+      break;
+    }
+    case 'resize': {
+      if (!d.moved) { if (Math.hypot(dx, dy) < 3) return; d.moved = true; d.pre = snap(); }
+      const c = d.c;
+      c.w = clamp(Math.round(d.w0 + dx / view.s), 200, 1200);
+      d.el.style.width = c.w + 'px';
+      if (c.type === 'text' || c.type === 'markdown') {
+        c.customHeight = Math.max(110, Math.round(d.h0 + dy / view.s));
+        d.el.style.height = c.customHeight + 'px';
+        d.el.classList.add('fixed-h');
+        measureMore(d.el, c);
+      }
+      dirtyCards.add(c.id); mmDirty = true;
+      break;
+    }
+    case 'link': {
+      const under = document.elementFromPoint(d.px, d.py);
+      const ov = under && under.closest ? under.closest('.card') : null;
+      const oid = ov && ov.dataset.id !== d.c.id ? ov.dataset.id : null;
+      if (oid !== d.over) {
+        if (d.over && cardEls.get(d.over)) cardEls.get(d.over).classList.remove('drop');
+        d.over = oid; if (oid) cardEls.get(oid).classList.add('drop');
+      }
+      drawTemp(d);
+      break;
+    }
+    case 'marquee': {
+      if (!d.moved && Math.hypot(dx, dy) < 3) return;
+      d.moved = true;
+      const x0 = Math.min(d.sx, d.px), y0 = Math.min(d.sy, d.py), x1 = Math.max(d.sx, d.px), y1 = Math.max(d.sy, d.py);
+      marquee.style.display = 'block'; marquee.style.transform = 'translate(' + x0 + 'px,' + y0 + 'px)';
+      marquee.style.width = (x1 - x0) + 'px'; marquee.style.height = (y1 - y0) + 'px';
+      const a = toWorld(x0, y0), b = toWorld(x1, y1), ids = new Set(d.base);
+      for (const c of P.cards) if (c.x < b.x && c.x + c.w > a.x && c.y < b.y && c.y + estH(c) > a.y) ids.add(c.id);
+      setSel(ids);
+      break;
+    }
+  }
+}
+let tempPath = null;
+function drawTemp(d) {
+  if (!tempPath) { tempPath = document.createElementNS(NS, 'path'); tempPath.setAttribute('class', 'e-temp'); edgesSvg.appendChild(tempPath); }
+  const p0 = anchor(d.c, d.side), n = sideNormal[d.side], w = toWorld(d.px, d.py);
+  const k = Math.min(140, Math.hypot(w.x - p0[0], w.y - p0[1]) * 0.4);
+  tempPath.setAttribute('d', 'M' + p0[0] + ' ' + p0[1] + 'C' + (p0[0] + n[0] * k) + ' ' + (p0[1] + n[1] * k) + ' ' + w.x + ' ' + w.y + ' ' + w.x + ' ' + w.y);
+}
+function endDrag(e, cancelled) {
+  const d = drag; if (!d) return;
+  drag = null; moveDirty = false;
+  viewport.classList.remove('panning', 'linking');
+  switch (d.type) {
+    case 'pan':
+      if (d.bg && !d.moved && !cancelled) { setSel([], d.edge); }
+      else if (d.moved) { lastMoved = performance.now(); persistSoon(); }
+      break;
+    case 'card':
+      if (d.moved) {
+        checkpoint(d.pre);
+        for (const it of d.items) { it.c.x = Math.round(it.c.x); it.c.y = Math.round(it.c.y); setPos(it.c, it.el); }
+        for (const x of d.edges) layoutEdge(x);
+        if (d.tg) {
+          // вошла в рамку или вышла из неё: решает центр карточки при отпускании
+          for (const it of d.items) {
+            const g = d.tg.get(it.c.id), gid = g ? g.id : null;
+            if (gid !== (it.c.group || null)) { if (gid) it.c.group = gid; else delete it.c.group; }
+          }
+        }
+        clearDragHl(d);
+        indexGroups(); pruneGroups(); refitGroups();
+        lastMoved = performance.now(); touch();
+      } else if (!d.shift && !cancelled && d.c && sel.size > 1 && sel.has(d.c.id)) setSel([d.c.id]);
+      break;
+    case 'resize':
+      if (d.moved) { checkpoint(d.pre); lastMoved = performance.now(); touch(); }
+      break;
+    case 'link': {
+      if (d.over && cardEls.get(d.over)) cardEls.get(d.over).classList.remove('drop');
+      if (tempPath) { tempPath.remove(); tempPath = null; }
+      if (cancelled || Math.hypot(d.px - d.sx, d.py - d.sy) < 8) break;
+      if (d.over) addEdge(d.c.id, d.over, true);
+      else {
+        const under = document.elementFromPoint(d.px, d.py);
+        if (under && (under === viewport || under.closest('#world'))) {
+          const w = toWorld(d.px, d.py), W = TYPES.text.w, H = 110;
+          const x = d.side === 'r' ? w.x : d.side === 'l' ? w.x - W : w.x - W / 2;
+          const y = d.side === 'b' ? w.y : d.side === 't' ? w.y - H : w.y - H / 2;
+          checkpoint();
+          const nc = addCard('text', '', 0, 0, { x: Math.round(x), y: Math.round(y), _noCp: true, _edit: true });
+          addEdge(d.c.id, nc.id, false, true);
+        }
+      }
+      break;
+    }
+    case 'marquee':
+      marquee.style.display = 'none';
+      if (!d.moved) setSel([]);
+      break;
+  }
+}
+addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) endDrag(e, false); });
+addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.id) endDrag(e, true); });
+viewport.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
+viewport.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
+
+viewport.addEventListener('wheel', e => {
+  const sc = e.target.closest && e.target.closest('.c-body');
+  if (!e.ctrlKey && sc && sc.scrollHeight > sc.clientHeight + 1 && (sc.parentElement.classList.contains('expanded') || sc.parentElement.classList.contains('fixed-h'))) return;
+  e.preventDefault();
+  let dy = e.deltaY;
+  if (e.deltaMode === 1) dy *= 33; else if (e.deltaMode === 2) dy *= 400;
+  zoomAt(e.clientX, e.clientY, Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0018)));
+}, { passive: false });
+
+/* ---------- карточки: операции ---------- */
+function addCard(type, content, wx, wy, extra) {
+  extra = extra || {};
+  const T = TYPES[type] || TYPES.text;
+  const c = Object.assign({ id: genId(), x: Math.round(wx - T.w / 2), y: Math.round(wy - 40), w: T.w, title: T.title, content: content || '', type }, extra);
+  if (!('x' in extra)) for (let i = 0; i < 20 && P.cards.some(o => Math.abs(o.x - c.x) < 24 && Math.abs(o.y - c.y) < 24); i++) { c.x += 36; c.y += 36; }
+  if (!extra._noCp) checkpoint();
+  const edit = c._edit; delete c._edit; delete c._noCp;
+  P.cards.push(c);
+  mountCard(c); c._h = cardEls.get(c.id).offsetHeight;
+  indexEdges(); measureMore(cardEls.get(c.id), c);
+  setSel([c.id]); raise(c.id);
+  touch();
+  if (edit) { c._fresh = true; requestAnimationFrame(() => startEdit(cardEls.get(c.id).querySelector('.c-title'), c, 'title', true)); }
+  return c;
+}
+function removeCards(ids) {
+  ids = ids.filter(id => cardMap.has(id));
+  if (!ids.length) return;
+  checkpoint();
+  const set = new Set(ids);
+  P.cards = P.cards.filter(c => !set.has(c.id));
+  const gone = P.edges.filter(e => set.has(e.from) || set.has(e.to)).map(e => e.id);
+  P.edges = P.edges.filter(e => !gone.includes(e.id));
+  gone.forEach(id => { const o = edgeEls.get(id); if (o) { o.g.remove(); o.lab.remove(); edgeEls.delete(id); } });
+  ids.forEach(unmountCard);
+  indexEdges(); indexGroups(); pruneGroups(); refitGroups();
+  setSel([...sel].filter(i => !set.has(i)), selEdge && gone.includes(selEdge) ? null : selEdge, selGroup);
+  touch(); hideTip();
+  toast(ids.length === 1 ? 'Карточка удалена' : 'Удалено карточек: ' + ids.length, 'Вернуть', undo);
+}
+function addEdge(from, to, editLabel, silent) {
+  if (from === to || P.edges.some(e => e.from === from && e.to === to)) { if (!silent) toast('Такая связь уже есть'); return null; }
+  if (!silent) checkpoint();
+  const e = { id: genId(), from, to, label: '' };
+  P.edges.push(e); indexEdges(); mountEdge(e);
+  if (!silent) setSel([], e.id);
+  touch();
+  if (editLabel) requestAnimationFrame(() => startEdgeEdit(e));
+  return e;
+}
+function removeEdge(id) {
+  const o = edgeEls.get(id); if (!o) return;
+  checkpoint();
+  P.edges = P.edges.filter(e => e.id !== id);
+  o.g.remove(); o.lab.remove(); edgeEls.delete(id);
+  indexEdges(); if (selEdge === id) selEdge = null;
+  refreshHighlights(); touch();
+  toast('Связь удалена', 'Вернуть', undo);
+}
+function duplicateSel() {
+  if (!sel.size) return;
+  checkpoint();
+  const map = new Map(), made = [], gmap = new Map();
+  for (const id of sel) {
+    const o = cardMap.get(id), c = Object.assign(cl(o), { id: genId(), x: o.x + 40, y: o.y + 40 });
+    // группа дублируется целиком, только если выделены все её карточки
+    if (c.group) {
+      const ms = gMembers.get(c.group) || [];
+      if (ms.every(m => sel.has(m.id))) {
+        if (!gmap.has(c.group)) { const og = gById(c.group), ng = { id: genId(), title: og ? og.title : '' }; P.groups.push(ng); gmap.set(c.group, ng.id); }
+        c.group = gmap.get(c.group);
+      } else delete c.group;
+    }
+    map.set(id, c.id); P.cards.push(c); mountCard(c); c._h = cardEls.get(c.id).offsetHeight; made.push(c.id);
+  }
+  indexGroups(); for (const id of gmap.values()) mountGroup(gById(id), false);
+  for (const e of [...P.edges]) if (map.has(e.from) && map.has(e.to)) { const n = { id: genId(), from: map.get(e.from), to: map.get(e.to), label: e.label }; P.edges.push(n); }
+  indexEdges(); P.edges.forEach(e => { if (!edgeEls.has(e.id)) mountEdge(e); });
+  for (const id of made) measureMore(cardEls.get(id), cardMap.get(id));
+  setSel(made); made.forEach(raise); touch();
+}
+
+/* ---------- редактирование ---------- */
+let editing = null;
+function startEdit(el, c, field, selectAll) {
+  if (!el || el.isContentEditable) return;
+  endEdit();
+  editing = { el, c, field, pre: snap(), orig: field === 'title' ? c.title : c.content };
+  if (field === 'content' && c.type === 'markdown') el.textContent = c.content;
+  try { el.contentEditable = 'plaintext-only'; if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true'; } catch (_) { el.contentEditable = 'true'; }
+  el.focus();
+  const r = document.createRange(); r.selectNodeContents(el);
+  if (!selectAll) r.collapse(false);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  cardEls.get(c.id).classList.add('editing');
+}
+function endEdit() {
+  const ed = editing; if (!ed) return;
+  editing = null;
+  const { el, c, field } = ed;
+  let v = el.textContent;
+  if (field === 'title') v = v.replace(/\s*\n\s*/g, ' ').trim();
+  el.removeAttribute('contenteditable');
+  const ce = cardEls.get(c.id); if (ce) ce.classList.remove('editing');
+  getSelection().removeAllRanges();
+  if (c._fresh) {
+    delete c._fresh;
+    if (!v && !c.content && field === 'title') {
+      // пустая новая карточка: убираем без следа
+      const h = hist(); h.undo.pop();
+      P.cards = P.cards.filter(x => x.id !== c.id);
+      P.edges = P.edges.filter(e => { if (e.from === c.id || e.to === c.id) { const o = edgeEls.get(e.id); if (o) { o.g.remove(); o.lab.remove(); edgeEls.delete(e.id); } return false; } return true; });
+      unmountCard(c.id); indexEdges(); setSel([]); touch(); updateHistBtns();
+      return;
+    }
+  }
+  if (v !== ed.orig) {
+    checkpoint(ed.pre);
+    if (field === 'title') { c.title = v; if (ce) $('.c-far span', ce).textContent = v || TYPES[c.type].label; el.textContent = v; }
+    else c.content = v;
+    touch();
+  }
+  if (field === 'content') refreshCardBody(c);
+  else if (el.textContent !== c.title) el.textContent = c.title;
+}
+document.addEventListener('focusout', e => { if (editing && e.target === editing.el) endEdit(); });
+document.addEventListener('keydown', e => {
+  if (!editing || e.target !== editing.el) return;
+  if (e.key === 'Escape') { e.preventDefault(); editing.el.textContent = editing.orig; if (editing.c._fresh) editing.el.textContent = ''; editing.el.blur(); }
+  else if (e.key === 'Enter' && (editing.field === 'title' || e.ctrlKey || e.metaKey)) { e.preventDefault(); editing.el.blur(); }
+  e.stopPropagation();
+}, true);
+let edgeEdit = null;
+function startEdgeEdit(e) {
+  const o = edgeEls.get(e.id); if (!o) return;
+  setSel([], e.id);
+  const t = $('.t', o.lab);
+  o.lab.classList.remove('empty');
+  edgeEdit = { e, t, orig: e.label };
+  try { t.contentEditable = 'plaintext-only'; if (t.contentEditable !== 'plaintext-only') t.contentEditable = 'true'; } catch (_) { t.contentEditable = 'true'; }
+  t.focus();
+  const r = document.createRange(); r.selectNodeContents(t); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+}
+function endEdgeEdit(cancel) {
+  const ed = edgeEdit; if (!ed) return; edgeEdit = null;
+  const v = cancel ? ed.orig : ed.t.textContent.replace(/\s+/g, ' ').trim();
+  ed.t.removeAttribute('contenteditable'); getSelection().removeAllRanges();
+  if (v !== ed.orig) { checkpoint(); ed.e.label = v; touch(); }
+  setEdgeLabelText(ed.e);
+}
+document.addEventListener('focusout', e => { if (edgeEdit && e.target === edgeEdit.t) endEdgeEdit(false); });
+document.addEventListener('keydown', e => {
+  if (!edgeEdit || e.target !== edgeEdit.t) return;
+  if (e.key === 'Enter') { e.preventDefault(); edgeEdit.t.blur(); }
+  else if (e.key === 'Escape') { e.preventDefault(); endEdgeEdit(true); }
+  e.stopPropagation();
+}, true);
+
+/* ---------- события карточек и подписей ---------- */
+viewport.addEventListener('click', e => {
+  const t = e.target;
+  const ex = t.closest('.elabel .ex');
+  if (ex) { removeEdge(ex.closest('.elabel').dataset.id); return; }
+  const gx = t.closest('.g-x');
+  if (gx) { if (ungroup([gx.closest('.gf').dataset.id])) toast('Разгруппировано', 'Вернуть', undo); return; }
+  const lab = t.closest('.elabel');
+  if (lab) { e.stopPropagation(); if (selEdge !== lab.dataset.id) setSel([], lab.dataset.id); return; }
+  const cardEl = t.closest('.card'); if (!cardEl) return;
+  const c = cardMap.get(cardEl.dataset.id);
+  const btn = t.closest('[data-act]');
+  if (btn && btn.dataset.act === 'del') { removeCards([c.id]); return; }
+  if (btn && btn.dataset.act === 'more') {
+    checkpoint(); c.expanded = !c.expanded; cardEl.classList.toggle('expanded', c.expanded); measureMore(cardEl, c); dirtyCards.add(c.id); touch(); return;
+  }
+  const yt = t.closest('.c-yt');
+  if (yt && performance.now() - lastMoved > 250 && !yt.querySelector('iframe')) openYoutube(yt);
+});
+function openYoutube(yt) {
+  const id = yt.dataset.yt;
+  const ok = /^https?:$/.test(location.protocol) && location.origin !== 'null';
+  if (!ok) {
+    yt.innerHTML = '<div class="fallback"><span>Из локального файла YouTube не встраивается.</span><a class="btn primary" style="justify-self:center" target="_blank" rel="noopener noreferrer" href="https://www.youtube.com/watch?v=' + esc(id) + '">Открыть на YouTube</a></div>';
+    return;
+  }
+  yt.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/' + encodeURIComponent(id) + '?autoplay=1&rel=0&modestbranding=1&playsinline=1&origin=' + encodeURIComponent(location.origin) + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
+}
+viewport.addEventListener('dblclick', e => {
+  const t = e.target;
+  const lab = t.closest('.elabel');
+  if (lab) { startEdgeEdit(P.edges.find(x => x.id === lab.dataset.id)); return; }
+  const hit = t.closest('.edge');
+  if (hit) { startEdgeEdit(P.edges.find(x => x.id === hit.dataset.id)); return; }
+  const gtab = t.closest('.g-tab');
+  if (gtab) { if (!t.closest('.g-x')) startGroupEdit(gById(gtab.closest('.gf').dataset.id), true); return; }
+  if (t.closest('.gf')) return;
+  const cardEl = t.closest('.card');
+  if (cardEl) {
+    const c = cardMap.get(cardEl.dataset.id);
+    if (t.closest('.c-rs')) { checkpoint(); delete c.customHeight; cardEl.style.height = ''; cardEl.classList.remove('fixed-h'); measureMore(cardEl, c); dirtyCards.add(c.id); touch(); return; }
+    if (lod !== 'full') { flyTo(c); return; }
+    const title = t.closest('.c-title');
+    if (title) { startEdit(title, c, 'title', true); return; }
+    const body = t.closest('.c-text,.c-md');
+    if (body) { startEdit(body, c, 'content', false); return; }
+    return;
+  }
+  if (t.closest('#world') || t === viewport) {
+    const w = toWorld(e.clientX, e.clientY);
+    addCard('text', '', w.x, w.y, { title: '', _edit: true });
+  }
+});
+
+/* ---------- вставка, дроп ---------- */
+const YT_RE = /(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/;
+function dropPoint() {
+  if (ptr.inside) return toWorld(ptr.x, ptr.y);
+  return viewCenterWorld();
+}
+viewport.addEventListener('pointerenter', () => { ptr.inside = true; });
+viewport.addEventListener('pointerleave', () => { ptr.inside = false; });
+function textToCard(text, w, off) {
+  text = String(text).trim(); if (!text) return null;
+  const x = w.x + off, y = w.y + off;
+  const yt = text.match(YT_RE);
+  if (yt && /^https?:\/\/\S+$/.test(text)) return addCard('youtube', yt[1], x, y, { title: 'YouTube' });
+  if (/^https?:\/\/\S+$/.test(text)) {
+    let host = text; try { host = new URL(text).hostname.replace(/^www\./, ''); } catch (_) {}
+    return addCard('link', text, x, y, { title: host });
+  }
+  const lines = text.split('\n'); const first = lines[0].trim();
+  if (lines.length === 1 && text.length <= 90) return addCard('text', '', x, y, { title: text });
+  if (first.length <= 70 && lines.length > 1) return addCard('text', lines.slice(1).join('\n').trim(), x, y, { title: first });
+  return addCard('text', text, x, y, { title: text.slice(0, 48).replace(/\s+\S*$/, '') + '…' });
+}
+function fileToDataURL(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+}
+function fileToText(file) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsText(file, 'utf-8'); });
+}
+async function imageDataURL(file) {
+  if (/gif|svg/.test(file.type) || file.size < 250 * 1024) return fileToDataURL(file);
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+    const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.naturalWidth * k); cv.height = Math.round(img.naturalHeight * k);
+    cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+    return cv.toDataURL('image/webp', 0.86);
+  } catch (_) { return fileToDataURL(file); } finally { URL.revokeObjectURL(url); }
+}
+// на десктопе данные лежат в файле, а не в localStorage, поэтому потолок выше
+const BIG = (DESK ? 16 : 1.2) * 1024 * 1024;
+async function filesToCards(files, w) {
+  let off = 0;
+  for (const f of files) {
+    const x = w.x + off, y = w.y + off, name = f.name || '';
+    const base = name.replace(/\.[^.]+$/, '');
+    if (/\.polotno$/i.test(name)) { await importText(await fileToText(f), name); continue; }
+    if (f.type.startsWith('image/')) addCard('image', await imageDataURL(f), x, y, { title: base || 'Изображение' });
+    else if (/\.md$/i.test(name) || f.type === 'text/markdown') addCard('markdown', await fileToText(f), x, y, { title: base, filename: name });
+    else if (/\.txt$/i.test(name) || f.type === 'text/plain') addCard('text', await fileToText(f), x, y, { title: base });
+    else {
+      const kind = f.type.startsWith('video/') ? 'video' : f.type.startsWith('audio/') ? 'audio' : 'file';
+      if (f.size > BIG) {
+        addCard('file', '', x, y, { title: base || 'Файл', filename: name });
+        toast('«' + name + '» слишком тяжёлый' + (DESK ? ' (больше 16 МБ)' : ' для памяти браузера') + '. Сохранил только имя.');
+      } else addCard(kind, await fileToDataURL(f), x, y, { title: base || TYPES[kind].title, filename: name });
+    }
+    off += 36;
+  }
+}
+window.addEventListener('paste', async e => {
+  if (isEditing()) {
+    e.preventDefault();
+    const tx = (e.clipboardData || window.clipboardData).getData('text');
+    if (tx) document.execCommand('insertText', false, tx);
+    return;
+  }
+  const cd = e.clipboardData; if (!cd) return;
+  e.preventDefault();
+  const w = dropPoint();
+  const imgs = Array.from(cd.items || []).filter(i => i.kind === 'file' && i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean);
+  if (imgs.length) { await filesToCards(imgs, w); return; }
+  const files = Array.from(cd.files || []);
+  if (files.length) { await filesToCards(files, w); return; }
+  const text = cd.getData('text/plain') || cd.getData('text');
+  if (text) {
+    const urls = text.trim().split(/\s*\n\s*/);
+    if (urls.length > 1 && urls.length <= 12 && urls.every(u => /^https?:\/\/\S+$/.test(u))) urls.forEach((u, i) => textToCard(u, w, i * 36));
+    else textToCard(text, w, 0);
+  } else toast('В буфере нечего вставить');
+});
+const dropEl = $('#drop');
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+addEventListener('dragenter', e => { e.preventDefault(); if (hasFiles(e)) { dragDepth++; dropEl.classList.add('on'); } });
+addEventListener('dragover', e => { e.preventDefault(); });
+addEventListener('dragleave', e => { if (hasFiles(e)) { dragDepth = Math.max(0, dragDepth - 1); if (!dragDepth) dropEl.classList.remove('on'); } });
+addEventListener('drop', async e => {
+  e.preventDefault(); dragDepth = 0; dropEl.classList.remove('on');
+  const w = toWorld(e.clientX, e.clientY);
+  const files = Array.from(e.dataTransfer.files || []);
+  if (files.length) { await filesToCards(files, w); return; }
+  const tx = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+  if (tx) textToCard(tx.split('\n')[0], w, 0);
+});
+
+/* ---------- полотна ---------- */
+const pmenu = $('#pmenu');
+function closePmenu() { pmenu.hidden = true; }
+function renderPmenu() {
+  pmenu.innerHTML = '<div class="lab">Полотна</div>';
+  for (const p of S.projects) {
+    const it = document.createElement('div');
+    it.className = 'pi' + (p.id === S.pid ? ' on' : ''); it.tabIndex = 0;
+    it.innerHTML = '<span class="n" spellcheck="false"></span><button class="a" data-a="ren" aria-label="Переименовать" title="Переименовать">' + ICON.edit + '</button><button class="a" data-a="del" aria-label="Удалить" title="Удалить">' + ICON.trash + '</button>';
+    const n = $('.n', it); n.textContent = p.name;
+    const startRename = () => {
+      n.contentEditable = 'plaintext-only'; if (n.contentEditable !== 'plaintext-only') n.contentEditable = 'true';
+      n.focus(); const r = document.createRange(); r.selectNodeContents(n); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    };
+    n.addEventListener('blur', () => {
+      if (!n.isContentEditable) return;
+      n.removeAttribute('contenteditable');
+      const v = n.textContent.replace(/\s+/g, ' ').trim() || p.name;
+      p.name = v; n.textContent = v; if (p.id === S.pid) projName.textContent = v; touch();
+    });
+    n.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); n.blur(); } if (e.key === 'Escape') { n.textContent = p.name; n.blur(); } });
+    it.addEventListener('click', async e => {
+      const a = e.target.closest('.a');
+      if (a && a.dataset.a === 'ren') { startRename(); return; }
+      if (a && a.dataset.a === 'del') {
+        if (S.projects.length <= 1) { toast('Последнее полотно не удаляю'); return; }
+        const r = await ask('Удалить полотно «' + p.name + '»? Карточки уйдут вместе с ним. Если что, есть экспорт.', ['Удалить', 'Оставить']);
+        if (r !== 0) return;
+        S.projects = S.projects.filter(x => x.id !== p.id); hists.delete(p.id);
+        if (S.pid === p.id) openProject(S.projects[0].id); else persist();
+        renderPmenu(); return;
+      }
+      if (n.isContentEditable) return;
+      if (p.id !== S.pid) { openProject(p.id); closePmenu(); }
+    });
+    n.addEventListener('dblclick', e => { e.stopPropagation(); startRename(); });
+    it.addEventListener('keydown', e => { if (e.target === it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (p.id !== S.pid) { openProject(p.id); closePmenu(); } } });
+    pmenu.appendChild(it);
+  }
+  const add = document.createElement('button');
+  add.className = 'padd'; add.innerHTML = ICON.plus + 'Новое полотно';
+  add.addEventListener('click', () => {
+    const p = normalize({ id: genId(), name: 'Новое полотно', cards: [], edges: [] });
+    S.projects.push(p); openProject(p.id); renderPmenu();
+    const items = pmenu.querySelectorAll('.pi'); const last = items[items.length - 1];
+    if (last) $('.a', last).click();
+  });
+  pmenu.appendChild(add);
+}
+function openProject(id) {
+  const p = S.projects.find(x => x.id === id); if (!p) return;
+  endEdit(); endEdgeEdit(true); endGroupEdit(true);
+  if (P && P !== p) P.view = { x: target.x, y: target.y, scale: target.s };
+  P = p; S.pid = id; sel = new Set(); selEdge = null; selGroup = null;
+  renderAll();
+  const v = p.view && typeof p.view.scale === 'number' ? p.view : null;
+  if (v) jumpView(v.x, v.y, clamp(v.scale, MIN_S, MAX_S), true); else fit(P.cards, true);
+  persist();
+}
+$('#projBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  if (!pmenu.hidden) { closePmenu(); return; }
+  renderPmenu(); pmenu.hidden = false;
+});
+document.addEventListener('pointerdown', e => { if (!pmenu.hidden && !pmenu.contains(e.target) && !e.target.closest('#projBtn')) closePmenu(); });
+
+/* ---------- toasts и диалог ---------- */
+function toast(msg, label, fn) {
+  const t = document.createElement('div'); t.className = 'toast';
+  const s = document.createElement('span'); s.textContent = msg; t.appendChild(s);
+  if (label) { const b = document.createElement('button'); b.textContent = label; b.addEventListener('click', () => { t.remove(); fn && fn(); }); t.appendChild(b); }
+  $('#toasts').appendChild(t);
+  while ($('#toasts').children.length > 3) $('#toasts').firstChild.remove();
+  setTimeout(() => t.remove(), label ? 6000 : 3500);
+}
+function ask(msg, buttons) {
+  return new Promise(res => {
+    const dlg = $('#dlg'), bt = $('#dlgBt');
+    $('#dlgMsg').textContent = msg; bt.innerHTML = '';
+    const done = v => { dlg.hidden = true; document.removeEventListener('keydown', onKey, true); res(v); };
+    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); done(-1); } };
+    buttons.forEach((b, i) => { const x = document.createElement('button'); x.className = 'btn' + (i === 0 ? ' primary' : ''); x.textContent = b; x.addEventListener('click', () => done(i)); bt.appendChild(x); });
+    document.addEventListener('keydown', onKey, true);
+    dlg.hidden = false; bt.firstChild.focus();
+  });
+}
+
+/* ---------- экспорт / импорт ---------- */
+let exporting = false;
+async function doExport() {
+  persist();
+  const data = JSON.stringify(workspace(), stripPriv, 2);
+  if (DESK) {
+    if (exporting) return; exporting = true;
+    try {
+      const path = await invoke('plugin:dialog|save', { options: {
+        title: 'Сохранить Полотно', filters: FILE_FILTERS,
+        defaultPath: 'polotno-' + new Date().toISOString().slice(0, 10) + '.' + FILE_EXT
+      } });
+      if (!path) return;
+      await invoke('write_text', { path, data });
+      toast('Сохранено: ' + baseName(path));
+    } catch (err) { toast('Не удалось сохранить: ' + err); }
+    finally { exporting = false; }
+    return;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+  a.download = 'polotno-workspace-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('JSON скачан');
+}
+$('#exportBtn').addEventListener('click', doExport);
+async function openPath(path) {
+  if (!path) return;
+  let text;
+  try { text = await invoke('read_text', { path }); } catch (err) { toast('Не открылся файл: ' + err); return; }
+  await importText(text, baseName(path));
+}
+$('#importBtn').addEventListener('click', async () => {
+  if (!DESK) { $('#imp').click(); return; }
+  try {
+    const path = await invoke('plugin:dialog|open', { options: { title: 'Открыть Полотно', multiple: false, directory: false, filters: FILE_FILTERS } });
+    await openPath(Array.isArray(path) ? path[0] : path);
+  } catch (err) { toast('Не открылся файл: ' + err); }
+});
+$('#imp').addEventListener('change', async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  await importText(await fileToText(f), f.name);
+});
+async function importText(text, fname) {
+  let d;
+  try { d = JSON.parse(text); } catch (err) { toast('Файл не читается как JSON'); return; }
+  if (d && Array.isArray(d.projects) && d.projects.length) {
+    const r = await ask('В файле полотен: ' + d.projects.length + '. Заменить всё текущее или добавить рядом?', ['Заменить всё', 'Добавить рядом', 'Отмена']);
+    if (r === 0) {
+      S.projects = d.projects.map(normalize); hists.clear();
+      const id = S.projects.some(p => p.id === d.currentProject) ? d.currentProject : S.projects[0].id;
+      P = null; openProject(id); toast('Импортировано');
+    } else if (r === 1) {
+      const have = new Set(S.projects.map(p => p.id));
+      const added = d.projects.map(normalize).map(p => { if (have.has(p.id)) p.id = genId(); return p; });
+      S.projects.push(...added); openProject(added[0].id); toast('Добавлено полотен: ' + added.length);
+    }
+  } else if (d && Array.isArray(d.cards)) {
+    const p = normalize({ id: genId(), name: (fname || 'Импорт').replace(/\.(json|polotno)$/i, ''), cards: d.cards, edges: d.edges || [] });
+    S.projects.push(p); openProject(p.id); toast('Полотно добавлено');
+  } else toast('Не похоже на файл Полотна');
+}
+
+/* ---------- кнопки и клавиши ---------- */
+$('#addBtn').addEventListener('click', () => { const w = viewCenterWorld(); addCard('text', '', w.x, w.y, { title: '', _edit: true }); });
+$('#undoBtn').addEventListener('click', undo);
+$('#redoBtn').addEventListener('click', redo);
+$('#groupBtn').addEventListener('click', groupSel);
+$('#ungroupBtn').addEventListener('click', ungroupSel);
+$('#fitBtn').addEventListener('click', () => fit(P.cards));
+$('#zoomIn').addEventListener('click', () => zoomAt(vw / 2, vh / 2, 1.3));
+$('#zoomOut').addEventListener('click', () => zoomAt(vw / 2, vh / 2, 1 / 1.3));
+zoomLabel.addEventListener('click', () => { const s = 1, k = s / target.s; jumpView(vw / 2 - (vw / 2 - target.x) * k, vh / 2 - (vh / 2 - target.y) * k, s); });
+const keysEl = $('#keys');
+const toggleKeys = () => { keysEl.hidden = !keysEl.hidden; };
+$('#helpBtn').addEventListener('click', toggleKeys);
+$('#keysX').addEventListener('click', () => { keysEl.hidden = true; });
+$('#hint').hidden = localStorage.getItem(HINT_KEY) === '1';
+$('#hintX').addEventListener('click', () => { $('#hint').hidden = true; try { localStorage.setItem(HINT_KEY, '1'); } catch (_) {} });
+
+addEventListener('keydown', e => {
+  if (!$('#dlg').hidden) return;
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
+  if (mod && k === 's') { e.preventDefault(); doExport(); return; }
+  if (isEditing()) return;
+  if (mod && (k === 'g' || e.code === 'KeyG')) { e.preventDefault(); e.shiftKey ? ungroupSel() : groupSel(); return; }
+  if (mod && k === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); return; }
+  if (mod && k === 'y') { e.preventDefault(); redo(); return; }
+  if (mod && k === 'a') { e.preventDefault(); setSel(P.cards.map(c => c.id)); return; }
+  if (mod && k === 'd') { e.preventDefault(); duplicateSel(); return; }
+  if (mod || e.altKey) return;
+  if (e.code === 'Space') {
+    if (e.target.closest && e.target.closest('button,a,[role="button"]')) return;
+    e.preventDefault(); if (!spaceDown) { spaceDown = true; viewport.classList.add('panmode'); } return;
+  }
+  if (e.key === 'Escape') {
+    if (drag && drag.type === 'link') endDrag(e, true);
+    if (!pmenu.hidden) closePmenu(); else if (!keysEl.hidden) keysEl.hidden = true; else setSel([]);
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (selEdge) { e.preventDefault(); removeEdge(selEdge); }
+    else if (selGroup) { e.preventDefault(); ungroupSel(); }
+    else if (sel.size) { e.preventDefault(); removeCards([...sel]); }
+    return;
+  }
+  if (e.key === 'Enter' && selGroup && !selEdge) { e.preventDefault(); startGroupEdit(gById(selGroup), true); return; }
+  if (e.key === 'Enter' && selEdge) { e.preventDefault(); startEdgeEdit(P.edges.find(x => x.id === selEdge)); return; }
+  if (k === 'n') { e.preventDefault(); const w = dropPoint(); addCard('text', '', w.x, w.y, { title: '', _edit: true }); return; }
+  if (e.key === '1') { fit(P.cards); return; }
+  if (e.key === '0') { zoomLabel.click(); return; }
+  if (e.key === '+' || e.key === '=') { zoomAt(vw / 2, vh / 2, 1.3); return; }
+  if (e.key === '-' || e.key === '_') { zoomAt(vw / 2, vh / 2, 1 / 1.3); return; }
+  if (e.key === '?' || (e.key === '/' && e.shiftKey)) { toggleKeys(); return; }
+});
+addEventListener('keyup', e => { if (e.code === 'Space' && spaceDown) { spaceDown = false; viewport.classList.remove('panmode'); } });
+addEventListener('blur', () => { spaceDown = false; viewport.classList.remove('panmode'); });
+
+/* ---------- десктоп: ссылки, файлы, закрытие окна ---------- */
+function deskHooks() {
+  const foot = $('#keys .foot'); if (foot) foot.textContent = 'Всё лежит у тебя на диске. Сервера нет, чужих глаз нет.';
+  // подписи под файлы .polotno вместо «скачать JSON»
+  $('#exportBtn').dataset.tip = 'Сохранить в файл (Ctrl+S)'; $('#exportBtn').setAttribute('aria-label', 'Сохранить в файл');
+  $('#importBtn').dataset.tip = 'Открыть файл (Ctrl+O)'; $('#importBtn').setAttribute('aria-label', 'Открыть файл');
+  const rows = [...document.querySelectorAll('#keys .row')], last = rows[rows.length - 1];
+  if (last) {
+    last.firstElementChild.textContent = 'Сохранить в файл .polotno';
+    const open = last.cloneNode(true);
+    open.firstElementChild.textContent = 'Открыть файл';
+    open.lastElementChild.innerHTML = '<kbd>Ctrl+O</kbd>';
+    last.after(open);
+  }
+  // внешние ссылки открываем в системном браузере, вложенные файлы сохраняем через диалог
+  document.addEventListener('click', async e => {
+    const a = e.target.closest && e.target.closest('a[href]'); if (!a) return;
+    const href = a.getAttribute('href') || '';
+    if (a.hasAttribute('download') && href.indexOf('data:') === 0) {
+      e.preventDefault();
+      const name = a.getAttribute('download') || 'file';
+      try {
+        const path = await invoke('plugin:dialog|save', { options: { title: 'Сохранить файл', defaultPath: name } });
+        if (!path) return;
+        await invoke('write_base64', { path, data: href.slice(href.indexOf(',') + 1) });
+        toast('Сохранено: ' + baseName(path));
+      } catch (err) { toast('Не удалось сохранить: ' + err); }
+      return;
+    }
+    if (/^(https?:|mailto:)/i.test(href)) {
+      e.preventDefault();
+      invoke('plugin:opener|open_url', { url: href }).catch(err => toast('Не открылась ссылка: ' + err));
+    }
+  }, true);
+  document.addEventListener('auxclick', e => { if (e.button === 1 && e.target.closest && e.target.closest('a[href]')) e.preventDefault(); }, true);
+  // браузерное меню и перезагрузка в приложении не нужны; в полях ввода меню оставляем (копировать, вставить)
+  document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest(EDITABLE))) e.preventDefault(); });
+  addEventListener('keydown', e => {
+    const k = e.key.toLowerCase(), mod = e.ctrlKey || e.metaKey;
+    if (e.key === 'F5' || (mod && (k === 'r' || k === 'p' || k === 'u')) || e.key === 'F7') e.preventDefault();
+    if (mod && k === 'o' && $('#dlg').hidden) { e.preventDefault(); $('#importBtn').click(); }
+  }, true);
+  // двойной клик по .polotno, когда окно уже открыто
+  TAURI.event.listen('open-file', ev => openPath(ev.payload));
+  // перед закрытием дописываем несохранённое
+  TAURI.window.getCurrentWindow().onCloseRequested(async () => {
+    endEdit(); endEdgeEdit(false); endGroupEdit(false);
+    try { await persist(); } catch (_) {}
+  });
+}
+
+/* ---------- старт ---------- */
+(async () => {
+  let raw = null;
+  if (DESK) { try { raw = await invoke('load_workspace'); } catch (err) { console.error(err); } }
+  else { try { raw = localStorage.getItem(LS_KEY); } catch (_) {} }
+  load(raw);
+  renderAll();
+  {
+    const v = P.view && typeof P.view.scale === 'number' ? P.view : null;
+    if (v) jumpView(v.x, v.y, clamp(v.scale, MIN_S, MAX_S), true); else fit(P.cards, true);
+  }
+  setStatus('', 'сохранено');
+  persist();
+  if (DESK) {
+    deskHooks();
+    const p = await invoke('take_pending_open').catch(() => null);
+    if (p) await openPath(p);
+  }
+})();
+window.__polotno = { S, view, target, fit: () => fit(P.cards, true), jump: jumpView, get P() { return P; },
+  select: ids => setSel(ids), group: groupSel, ungroup: ungroupSel, undo, redo, openProject };
+})();
+</script>
+</body>
+</html>
