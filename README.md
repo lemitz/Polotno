@@ -140,6 +140,16 @@ WebView2 renders in step with the monitor, so on a 260 Hz display Polotno runs a
 
 The WebView2 switches can be overridden without a rebuild through the `POLOTNO_WEBVIEW_ARGS` environment variable, for example `--remote-debugging-port=9222` to attach Chrome DevTools to the running app (`__polotno` is the module API, `__errors` collects page errors).
 
+## Generating canvases (for AI agents)
+
+[`docs/CANVAS_GUIDE.md`](docs/CANVAS_GUIDE.md) explains how to build a good `.polotno` file: the format, readability at every zoom level (what is left of a card at 30% and at 20%), layout with real numbers for card heights and gaps, links and labels, common mistakes. Check a canvas before handing it over:
+
+```bash
+node scripts/check-canvas.mjs canvas.polotno      # or: npm run check-canvas -- canvas.polotno
+```
+
+The checker has no dependencies and estimates card heights the way the app does. It reports overlaps, titles that break or vanish when zoomed out, links through other cards and groups, hidden link labels, repeated labels and format errors.
+
 ## Development
 
 Requirements:
@@ -206,6 +216,9 @@ src-tauri/
   tauri.updater.conf.json  extra config for signed release builds
   capabilities/            permissions granted to the windows
 docs/images/               screenshots for this README
+docs/demo/                 demo canvases: the full tour and a minimal example
+docs/CANVAS_GUIDE.md       how to build a canvas (for AI agents)
+scripts/check-canvas.mjs   canvas checker
 .github/workflows/         Windows build and release
 ```
 
