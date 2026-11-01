@@ -1,6 +1,6 @@
 [package]
 name = "polotno"
-version = "0.5.1"
+version = "0.5.2"
 description = "Полотно — бесконечный причинно-семантический холст"
 authors = ["kobyla.by"]
 edition = "2021"

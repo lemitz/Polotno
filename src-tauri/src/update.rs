@@ -24,21 +24,15 @@ fn updater(app: &AppHandle) -> Res<tauri_plugin_updater::Updater> {
 }
 
 /// Приложение стоит через установщик (а не запущено как портативный exe).
+/// Признак — `uninstall.exe` рядом с exe: установщик кладёт его в любую выбранную папку,
+/// у портативного exe его нет. (В 0.5.0 сверялась только папка по умолчанию, и установка
+/// в другое место, например `Z:\Polotno`, считалась портативной — обновления не проверялись.)
 #[tauri::command]
 pub fn is_installed() -> bool {
-    let Ok(exe) = std::env::current_exe() else { return false };
-    let Ok(local) = std::env::var("LOCALAPPDATA") else { return false };
-    let dir = std::path::Path::new(&local).join("Polotno");
-    exe.parent().is_some_and(|p| p.eq_ignore_ascii_case_path(&dir))
-}
-
-trait EqPath {
-    fn eq_ignore_ascii_case_path(&self, other: &std::path::Path) -> bool;
-}
-impl EqPath for std::path::Path {
-    fn eq_ignore_ascii_case_path(&self, other: &std::path::Path) -> bool {
-        self.to_string_lossy().eq_ignore_ascii_case(&other.to_string_lossy())
-    }
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|dir| dir.join("uninstall.exe").is_file()))
+        .unwrap_or(false)
 }
 
 #[tauri::command]

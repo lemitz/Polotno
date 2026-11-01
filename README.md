@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lemitz/Polotno/releases"><img src="https://img.shields.io/badge/version-0.5.1-8b8cff" alt="Version 0.5.1"></a>
+  <a href="https://github.com/lemitz/Polotno/releases"><img src="https://img.shields.io/badge/version-0.5.2-8b8cff" alt="Version 0.5.2"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-0078d4" alt="Windows 10 / 11 x64">
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db" alt="Tauri 2">
   <img src="https://img.shields.io/badge/rendering-DOM%20%2B%20WebGL2-b7ff00" alt="DOM + WebGL2">
@@ -170,8 +170,8 @@ The release profile is tuned for size (`opt-level = "s"`, LTO, symbols stripped)
 The [Windows workflow](.github/workflows/release.yml) runs for pull requests to `main`, version tags and manual dispatches. It checks that the npm, Rust and Tauri versions match (and match the tag), runs the Rust tests, builds the signed installer and the portable executable, and uploads them plus `SHA256SUMS.txt` as the `polotno-windows` artifact. **Only a pushed version tag publishes a GitHub Release**, with the text from [`RELEASE_NOTES.md`](RELEASE_NOTES.md) and a generated `latest.json` for the updater:
 
 ```bash
-git tag -a v0.5.1 -m "Polotno v0.5.1"
-git push origin v0.5.1
+git tag -a v0.5.2 -m "Polotno v0.5.2"
+git push origin v0.5.2
 ```
 
 The version lives in three places that must agree: `package.json`, `src-tauri/Cargo.toml` and `src-tauri/tauri.conf.json`.
