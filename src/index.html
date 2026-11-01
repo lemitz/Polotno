@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Полотно</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>
+// ошибки страницы для отладки (DevTools: __errors)
+window.__errors = [];
+addEventListener('error', e => __errors.push(String(e.message) + ' @' + (e.filename || '').split('/').pop() + ':' + e.lineno));
+addEventListener('unhandledrejection', e => __errors.push('promise: ' + (e.reason && e.reason.message || e.reason)));
+</script>
 <link rel="preload" href="/fonts/inter-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -115,7 +121,9 @@ kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; backgr
 .card.t-audio { --tc: #9C94A8; --tf: #2d2b31; }
 .card.t-youtube { --tc: #A88F7E; --tf: #312b27; }
 .card.t-file { --tc: #8D8D88; --tf: #2b2b2a; }
-.card.cull, .edge.cull, .elabel.cull { visibility: hidden; pointer-events: none; }
+.card.t-pdf { --tc: #A8A07E; --tf: #302f29; }
+/* за экраном: не участвуют ни в раскладке, ни в отрисовке (высота карточки запомнена заранее) */
+.card.cull, .edge.cull, .elabel.cull { display: none; }
 .card::after {
   content: ""; position: absolute; inset: -2px; border-radius: 14px; border: 2px solid var(--acid);
   opacity: 0; pointer-events: none; transition: opacity .14s var(--ease);
@@ -359,6 +367,51 @@ kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; backgr
 #drop.on { display: flex; }
 #marquee { position: absolute; left: 0; top: 0; width: 0; height: 0; display: none; border: 1px solid var(--acid); background: rgba(183,255,0,.07); pointer-events: none; z-index: 20; }
 #imp { display: none; }
+
+/* ---------- вложения: превью ссылки, PDF, файл ---------- */
+.c-lp { display: block; border-radius: 10px; overflow: hidden; background: rgba(245,245,240,.05); border: 1px solid var(--line); color: var(--paper); text-decoration: none; }
+.c-lp:hover { border-color: rgba(183,255,0,.45); }
+.c-lp img { border-radius: 0; aspect-ratio: 1.91 / 1; object-fit: cover; background: #111; }
+.c-lp .lp-b { display: grid; gap: 4px; padding: 10px 12px 11px; }
+.c-lp .lp-s { font: 500 12px/1.2 var(--mono); color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-lp .lp-t { font-weight: 600; font-size: 14px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.c-lp .lp-d { font-size: 13px; line-height: 1.45; color: var(--dim); overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.c-lp.loading .lp-t::after { content: " · загружаю превью…"; color: var(--mute); font-weight: 400; }
+.c-pdf { position: relative; display: block; border-radius: 8px; overflow: hidden; background: #f5f5f0; }
+.c-pdf img { border-radius: 0; }
+.c-pdf .pg { position: absolute; right: 8px; bottom: 8px; padding: 3px 8px; border-radius: 6px; background: rgba(33,33,33,.85); color: var(--paper); font: 500 12px/1.3 var(--mono); }
+.c-pdf.nothumb { display: grid; place-items: center; min-height: 120px; background: rgba(245,245,240,.05); border: 1px solid var(--line); color: var(--mute); font-size: 13px; }
+.c-row { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.c-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line-2); color: var(--dim); font: 500 12px/1 var(--sans); }
+.c-btn:hover { border-color: var(--acid); color: var(--acid); }
+.c-btn svg.i { width: 14px; height: 14px; }
+
+/* ---------- общие меню и панели (их используют модули из js/) ---------- */
+#menu { position: fixed; z-index: 75; min-width: 230px; max-width: 340px; padding: 6px; border-radius: 14px; background: var(--ink-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+#menu[hidden] { display: none; }
+#menu .lab { padding: 8px 10px 6px; font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+#menu .mi { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 9px; color: var(--dim); font-weight: 500; text-align: left; }
+#menu .mi:hover:not([disabled]) { background: rgba(245,245,240,.07); color: var(--paper); }
+#menu .mi[disabled] { opacity: .4; cursor: default; }
+#menu .mi.on { color: var(--paper); box-shadow: inset 2px 0 0 var(--acid); background: rgba(183,255,0,.08); }
+#menu .mi .k { margin-left: auto; font: 500 12px/1 var(--mono); color: var(--mute); }
+#menu .mi svg.i { color: var(--mute); }
+#menu .sepm { height: 1px; margin: 5px 6px; background: var(--line); }
+.panel { position: fixed; z-index: 60; border-radius: 14px; background: var(--ink-2); border: 1px solid var(--line-2); box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+.panel[hidden] { display: none !important; }
+.panel h4 { font: 600 16px/1.2 var(--sans); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.panel .muted { color: var(--mute); font-size: 13px; }
+.pin { width: 100%; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--ink); color: var(--paper); font: 400 14px/1 var(--sans); outline: none; }
+.pin:focus { border-color: var(--acid); }
+mark { background: rgba(183,255,0,.25); color: var(--paper); border-radius: 3px; padding: 0 1px; }
+.card.hit::after { opacity: .9; border-style: dashed; }
+.card.flash::after { animation: flash 1.2s var(--ease); }
+@keyframes flash { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- WebGL на дальних масштабах: DOM-слои карточек прячем ---------- */
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; display: none; }
+#viewport.gl-on #gl { display: block; }
+#viewport.gl-on #cards, #viewport.gl-on #labels, #viewport.gl-on #edges, #viewport.gl-on #grid { display: none; }
 @media (max-width: 900px) {
   .brand b, .btn .lb, .save .lb { display: none; }
   #hint { display: none; }
@@ -370,6 +423,7 @@ kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; backgr
 </head>
 <body>
 <div id="viewport">
+  <canvas id="gl"></canvas>
   <div id="world" class="lod-full">
     <div id="grid"></div>
     <div id="groups"></div>
@@ -403,6 +457,8 @@ kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; backgr
     <div class="sep"></div>
     <button class="btn" id="groupBtn" data-tip="Сгруппировать (Ctrl+G)" aria-label="Сгруппировать" disabled><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg></button>
     <button class="btn" id="ungroupBtn" data-tip="Разгруппировать (Ctrl+Shift+G)" aria-label="Разгруппировать" disabled><svg class="i" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><rect x="7" y="7" width="4" height="4" rx=".8"/><rect x="13" y="13" width="4" height="4" rx=".8"/></svg></button>
+    <div class="sep" id="toolSep"></div>
+    <span id="tools"></span>
   </div>
   <div class="grp r">
     <button class="btn" id="fitBtn" data-tip="Весь холст (1)" aria-label="Весь холст"><svg class="i" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -412,11 +468,13 @@ kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; backgr
     <div class="sep"></div>
     <button class="btn" id="exportBtn" data-tip="Скачать JSON (Ctrl+S)" aria-label="Экспорт"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></svg></button>
     <button class="btn" id="importBtn" data-tip="Загрузить JSON" aria-label="Импорт"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></svg></button>
+    <span id="toolsR"></span>
     <button class="btn" id="helpBtn" data-tip="Горячие клавиши (?)" aria-label="Горячие клавиши"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></svg></button>
   </div>
 </header>
 
 <div id="pmenu" hidden></div>
+<div id="menu" hidden></div>
 <div id="mmwrap"><canvas id="minimap" width="200" height="132"></canvas></div>
 <div id="hint"><span><kbd>2×клик</kbd> карточка</span><span class="s">·</span><span><kbd>Ctrl+V</kbd> вставить</span><span class="s">·</span><span><kbd>Пробел</kbd> таскать холст</span><span class="s">·</span><span><kbd>?</kbd> все клавиши</span><button class="x" id="hintX" aria-label="Скрыть подсказку"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
 <div id="keys" hidden>
@@ -446,6 +504,14 @@ kbd { font: 500 12px/1 var(--mono); padding: 3px 6px; border-radius: 6px; backgr
 <div id="drop">Бросай сюда, подхвачу</div>
 <input type="file" id="imp" accept=".json,application/json">
 
+<!-- модули: каждый кладёт в window.PolotnoExt функцию, ядро вызывает её с API после старта -->
+<script src="js/gl.js"></script>
+<script src="js/search.js"></script>
+<script src="js/views.js"></script>
+<script src="js/export.js"></script>
+<script src="js/present.js"></script>
+<script src="js/suggest.js"></script>
+<script src="js/desk.js"></script>
 <script>
 (() => {
 'use strict';
@@ -492,8 +558,11 @@ const TYPES = {
   video: { label: 'Видео', w: 360, title: 'Видео' },
   audio: { label: 'Аудио', w: 320, title: 'Аудио' },
   youtube: { label: 'YouTube', w: 320, title: 'YouTube' },
-  file: { label: 'Файл', w: 280, title: 'Файл' }
+  file: { label: 'Файл', w: 280, title: 'Файл' },
+  pdf: { label: 'PDF', w: 300, title: 'PDF' }
 };
+// время создания из id (genId начинается с Date.now в base36); у заготовок id без времени
+const idTime = id => { const t = parseInt(String(id).slice(0, 8), 36); return t > 1.5e12 && t < 4e12 ? t : 0; };
 
 /* ---------- данные ---------- */
 const S = { projects: [], pid: null };
@@ -505,6 +574,10 @@ let sel = new Set(), selEdge = null, selGroup = null;
 const groupEls = new Map(), gMembers = new Map();
 const cardEls = new Map(), edgeEls = new Map(), cardMap = new Map(), incident = new Map();
 const hists = new Map();
+// события для модулей из js/: draw (кадр WebGL), lod, render (полотно перерисовано), change, select, index, project
+const hooks = {};
+const on = (k, f) => (hooks[k] = hooks[k] || []).push(f);
+const fire = (k, a) => { const l = hooks[k]; if (l) for (const f of l) { try { f(a); } catch (e) { console.error(e); } } };
 
 function seedProjects() {
   const c = (id, x, y, w, title, content) => ({ id, x, y, w, title, content, type: 'text' });
@@ -583,7 +656,8 @@ function seedProjects() {
 function normalize(p) {
   p.cards = Array.isArray(p.cards) ? p.cards : [];
   p.edges = Array.isArray(p.edges) ? p.edges : [];
-  p.id = p.id || genId();
+  // id идёт в имя файла на десктопе: только латиница, цифры, - и _
+  p.id = /^[\w-]{1,64}$/.test(String(p.id || '')) ? String(p.id) : genId();
   p.name = p.name || 'Без названия';
   const ids = new Set();
   p.cards = p.cards.filter(c => c && c.id && !ids.has(c.id) && ids.add(c.id)).map(c => {
@@ -591,6 +665,7 @@ function normalize(p) {
     c.x = +c.x || 0; c.y = +c.y || 0; c.w = clamp(+c.w || TYPES[c.type].w, 200, 1200);
     c.title = c.title == null ? '' : String(c.title);
     c.content = c.content == null ? '' : String(c.content);
+    if (!c.created) { const t = idTime(c.id); if (t) c.created = t; }
     return c;
   });
   p.edges = p.edges.filter(e => e && ids.has(e.from) && ids.has(e.to) && e.from !== e.to).map(e => { e.id = e.id || genId(); e.label = e.label || ''; return e; });
@@ -628,17 +703,21 @@ function workspace() {
   return { version: 'kobyla-polotno-v041', exportedAt: new Date().toISOString(), projects: S.projects, currentProject: S.pid };
 }
 const stripPriv = (k, v) => (typeof k === 'string' && k.charCodeAt(0) === 95 ? undefined : v);
-// на десктопе пишем в файл на диске; записи идут строго по очереди, последняя побеждает
+/* На десктопе у каждого полотна свой файл (projects/<id>.json), список полотен в index.json.
+   Окно пишет только своё полотно, так что несколько окон не затирают друг друга.
+   Полотна, открытые не здесь, лежат в S.projects заглушками (_stub) до первого открытия. */
 let diskQ = Promise.resolve();
+const queue = fn => (diskQ = diskQ.then(fn, fn));
+const stub = m => ({ id: m.id, name: m.name || 'Без названия', cards: [], edges: [], groups: [], _stub: true });
 function persist() {
   clearTimeout(saveT); saveT = 0;
   if (P) P.view = { x: target.x, y: target.y, scale: target.s };
   if (DESK) {
-    const data = JSON.stringify(workspace(), stripPriv);
-    diskQ = diskQ.then(() => invoke('save_workspace', { data }))
+    if (!P || P._stub) return diskQ;
+    const id = P.id, data = JSON.stringify(P, stripPriv);
+    return queue(() => invoke('project_save', { id, data })
       .then(() => { if (!saveT) setStatus('', 'сохранено'); return true; })
-      .catch(err => { setStatus('err', 'не сохранилось, скачай файл'); console.error(err); return false; });
-    return diskQ;
+      .catch(err => { setStatus('err', 'не сохранилось, скачай файл'); console.error(err); return false; }));
   }
   try {
     localStorage.setItem(LS_KEY, JSON.stringify(workspace(), stripPriv));
@@ -652,11 +731,100 @@ function persist() {
 function touch() {
   setStatus('busy', 'сохраняю…');
   clearTimeout(saveT); saveT = setTimeout(persist, 400);
-  mmDirty = true; schedule(); updateGroupBtns();
+  mmDirty = true; needDraw(); updateGroupBtns();
   emptyEl.classList.toggle('on', !P.cards.length);
+  fire('change');
 }
 addEventListener('pagehide', () => { if (saveT) persist(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && saveT) persist(); });
+
+// список полотен (порядок и названия); на десктопе index.json, его видят все окна
+function saveIndex() {
+  if (!DESK) return persist();
+  const data = JSON.stringify({ projects: S.projects.map(p => ({ id: p.id, name: p.name })), current: S.pid });
+  return queue(() => invoke('index_save', { data }).catch(err => { setStatus('err', 'не сохранился список полотен'); console.error(err); }));
+}
+// пришёл новый список полотен (другое окно переименовало, добавило, удалило)
+function applyIndex(data) {
+  let idx; try { idx = JSON.parse(data); } catch (_) { return; }
+  const metas = Array.isArray(idx.projects) ? idx.projects.filter(m => m && m.id) : [];
+  const have = new Map(S.projects.map(p => [p.id, p]));
+  const next = metas.map(m => { const p = have.get(m.id); if (p) { p.name = m.name || p.name; return p; } return stub(m); });
+  if (P && !next.includes(P)) next.push(P);
+  S.projects = next;
+  if (P) { projName.textContent = P.name; setTitle(); }
+  if (!pmenu.hidden) renderPmenu();
+  fire('index');
+  return idx;
+}
+const projectFile = p => JSON.stringify(p, stripPriv);
+async function saveProjectFile(p) { if (DESK) await queue(() => invoke('project_save', { id: p.id, data: projectFile(p) })); }
+// все полотна целиком (для экспорта): заглушки дочитываем с диска
+async function fullWorkspace() {
+  if (DESK) {
+    await persist();
+    for (let i = 0; i < S.projects.length; i++) {
+      const p = S.projects[i]; if (!p._stub) continue;
+      const raw = await invoke('project_load', { id: p.id }).catch(() => null);
+      if (raw) { const f = normalize(JSON.parse(raw)); f.name = p.name; S.projects[i] = f; }
+    }
+  }
+  return workspace();
+}
+function setTitle() {
+  const t = (P ? P.name + ' — ' : '') + 'Полотно';
+  document.title = t;
+  if (DESK) TAURI.window.getCurrentWindow().setTitle(t).catch(() => {});
+}
+
+/* ---------- вложения ----------
+   Десктоп: файлы лежат в attachments/, в карточке ссылка att:<файл>, показываются через asset-протокол.
+   Браузер (сайт): как раньше, data: URL прямо в карточке. */
+let attDir = '';
+const isAtt = v => typeof v === 'string' && v.indexOf('att:') === 0;
+const attFile = v => (isAtt(v) ? v.slice(4) : '');
+const attUrl = v => (isAtt(v) ? (DESK && attDir ? TAURI.core.convertFileSrc(attDir + '\\' + v.slice(4)) : '') : v || '');
+const extOf = n => { const m = /\.([a-z0-9]{1,8})$/i.exec(String(n || '')); return m ? m[1].toLowerCase() : ''; };
+const kindByExt = e => /^(png|jpe?g|jfif|gif|webp|svg|bmp|avif|ico)$/.test(e) ? 'image' : /^(mp4|m4v|webm|mov|mkv)$/.test(e) ? 'video'
+  : /^(mp3|wav|ogg|oga|opus|flac|m4a|aac)$/.test(e) ? 'audio' : e === 'pdf' ? 'pdf' : 'file';
+// тело запроса: 4 байта длины имени (LE), имя в UTF-8, потом сами байты
+function attSaveBytes(bytes, name) {
+  const nm = new TextEncoder().encode(name || 'file.bin');
+  const body = new Uint8Array(4 + nm.length + bytes.length);
+  new DataView(body.buffer).setUint32(0, nm.length, true);
+  body.set(nm, 4); body.set(bytes, 4 + nm.length);
+  return invoke('att_save', body);
+}
+function dataUrlBytes(url) {
+  const m = /^data:([^;,]*)(;base64)?,/.exec(url); if (!m) return null;
+  const body = url.slice(m[0].length);
+  if (!m[2]) return { mime: m[1], bytes: new TextEncoder().encode(decodeURIComponent(body)) };
+  const bin = atob(body), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return { mime: m[1], bytes: out };
+}
+const MIME_EXT = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/svg+xml': 'svg', 'video/mp4': 'mp4', 'video/webm': 'webm', 'audio/mpeg': 'mp3', 'audio/wav': 'wav', 'audio/ogg': 'ogg', 'application/pdf': 'pdf' };
+// data: URL из старых данных и с сайта переезжают в файлы
+async function migrateDataUrls(p) {
+  if (!DESK) return false;
+  let changed = false;
+  for (const c of p.cards) for (const k of ['content', 'thumb']) {
+    const v = c[k]; if (typeof v !== 'string' || v.indexOf('data:') !== 0) continue;
+    const d = dataUrlBytes(v); if (!d) continue;
+    const name = c.filename || ((c.title || 'file') + '.' + (MIME_EXT[d.mime] || 'bin'));
+    try { const a = await attSaveBytes(d.bytes, name); c[k] = 'att:' + a.file; changed = true; } catch (e) { console.error(e); }
+  }
+  return changed;
+}
+// для JSON на сайт: вложения обратно в data: URL
+async function inlineAtts(ws) {
+  const out = JSON.parse(JSON.stringify(ws, stripPriv));
+  for (const p of out.projects) for (const c of p.cards) for (const k of ['content', 'thumb']) {
+    if (isAtt(c[k])) { try { c[k] = await invoke('att_read_b64', { file: attFile(c[k]) }); } catch (_) { c[k] = ''; } }
+    if (c.preview && isAtt(c.preview.image)) { try { c.preview.image = await invoke('att_read_b64', { file: attFile(c.preview.image) }); } catch (_) { c.preview.image = ''; } }
+  }
+  return out;
+}
 
 /* ---------- история ---------- */
 const cl = o => { const r = {}; for (const k in o) if (k.charCodeAt(0) !== 95) r[k] = o[k]; return r; };
@@ -724,17 +892,34 @@ const dirtyCards = new Set();
 const estH = c => c._h || 140;
 const setPos = (c, el) => { el.style.transform = 'translate(' + c.x + 'px,' + c.y + 'px)'; };
 
+const fmtSize = n => !n ? '' : n < 1024 ? n + ' Б' : n < 1048576 ? (n / 1024).toFixed(0) + ' КБ' : (n / 1048576).toFixed(n < 10485760 ? 1 : 0) + ' МБ';
+// кнопки под вложением на десктопе: открыть программой по умолчанию, сохранить копию
+const attBtns = c => isAtt(c.content) && DESK
+  ? '<div class="c-row"><button class="c-btn" data-act="att-open">' + ICON.ext + 'Открыть</button><button class="c-btn" data-act="att-save">' + ICON.file + 'Сохранить</button></div>' : '';
 function bodyHTML(c) {
   switch (c.type) {
     case 'markdown': return '<div class="c-md" data-field="content" spellcheck="false">' + renderMarkdown(c.content) + '</div>';
-    case 'image': return '<img src="' + esc(c.content) + '" alt="" decoding="async" draggable="false">';
-    case 'video': return '<video src="' + esc(c.content) + '" controls preload="metadata"></video>';
-    case 'audio': return '<audio src="' + esc(c.content) + '" controls preload="metadata"></audio>';
+    case 'image': return '<img src="' + esc(attUrl(c.content)) + '" alt="" decoding="async" draggable="false">';
+    case 'video': return '<video src="' + esc(attUrl(c.content)) + '" controls preload="metadata"></video>';
+    case 'audio': return '<audio src="' + esc(attUrl(c.content)) + '" controls preload="metadata"></audio>';
     case 'youtube': return '<div class="c-yt" data-yt="' + esc(c.content) + '"><img src="https://i.ytimg.com/vi/' + esc(c.content) + '/hqdefault.jpg" alt="" loading="lazy" draggable="false"><div class="play"></div></div>';
-    case 'link': return '<a class="c-link" href="' + esc(c.content) + '" target="_blank" rel="noopener noreferrer">' + ICON.ext + '<span class="u">' + esc(c.content) + '</span></a>';
-    case 'file': return c.content && c.content.indexOf('data:') === 0
+    case 'link': {
+      const pv = c.preview;
+      if (!pv && !c._loading) return '<a class="c-link" href="' + esc(c.content) + '" target="_blank" rel="noopener noreferrer">' + ICON.ext + '<span class="u">' + esc(c.content) + '</span></a>'
+        + (DESK ? '<div class="c-row"><button class="c-btn" data-act="preview">Загрузить превью</button></div>' : '');
+      let host = c.content; try { host = new URL(c.content).hostname.replace(/^www\./, ''); } catch (_) {}
+      return '<a class="c-lp' + (c._loading ? ' loading' : '') + '" href="' + esc(c.content) + '" target="_blank" rel="noopener noreferrer">'
+        + (pv && pv.image ? '<img src="' + esc(attUrl(pv.image)) + '" alt="" decoding="async" draggable="false">' : '')
+        + '<span class="lp-b"><span class="lp-s">' + esc((pv && pv.site) || host) + '</span>'
+        + '<span class="lp-t">' + esc((pv && pv.title) || c.content) + '</span>'
+        + (pv && pv.description ? '<span class="lp-d">' + esc(pv.description) + '</span>' : '') + '</span></a>';
+    }
+    case 'pdf': return (c.thumb
+      ? '<div class="c-pdf"><img src="' + esc(attUrl(c.thumb)) + '" alt="" decoding="async" draggable="false">' + (c.pages ? '<span class="pg">' + c.pages + ' стр.</span>' : '') + '</div>'
+      : '<div class="c-pdf nothumb">' + (c._loading ? 'рисую первую страницу…' : esc(c.filename || 'PDF')) + '</div>') + attBtns(c);
+    case 'file': return (c.content && c.content.indexOf('data:') === 0
       ? '<a class="c-file" href="' + esc(c.content) + '" download="' + esc(c.filename || 'file') + '">' + ICON.file + '<span class="u">' + esc(c.filename || 'Файл') + '</span></a>'
-      : '<div class="c-file">' + ICON.file + '<span class="u">' + esc(c.filename || 'Файл') + '</span></div>';
+      : '<div class="c-file">' + ICON.file + '<span class="u">' + esc(c.filename || 'Файл') + (c.size ? ' · ' + fmtSize(c.size) : '') + '</span></div>') + attBtns(c);
     default: return '<div class="c-text" data-field="content" spellcheck="false">' + esc(c.content) + '</div>';
   }
 }
@@ -813,16 +998,21 @@ function mountEdge(e) {
   e._cull = false;
   layoutEdge(e);
 }
-function layoutEdge(e) {
-  const o = edgeEls.get(e.id), a = cardMap.get(e.from), b = cardMap.get(e.to);
-  if (!o || !a || !b) return;
+// кривая связи: от p0 через c1, c2 к pe, наконечник от pe к p3 (iv: длина наконечника в единицах мира на пиксель)
+function edgeCurve(a, b, iv) {
   const [sa, sb] = pickSides(a, b);
   const p0 = anchor(a, sa), p3 = anchor(b, sb), na = sideNormal[sa], nb = sideNormal[sb];
   const dist = Math.hypot(p3[0] - p0[0], p3[1] - p0[1]);
   const k = clamp(dist * 0.32, 24, 220);
-  const al = Math.min(11 * inv, dist * 0.45);
+  const al = Math.min(11 * iv, dist * 0.45);
   const pe = [p3[0] + nb[0] * al, p3[1] + nb[1] * al];
   const c1 = [p0[0] + na[0] * k, p0[1] + na[1] * k], c2 = [pe[0] + nb[0] * k, pe[1] + nb[1] * k];
+  return { p0, c1, c2, pe, p3, nb, al };
+}
+function layoutEdge(e) {
+  const o = edgeEls.get(e.id), a = cardMap.get(e.from), b = cardMap.get(e.to);
+  if (!o || !a || !b) return;
+  const { p0, c1, c2, pe, p3, nb, al } = edgeCurve(a, b, inv);
   const d = 'M' + p0[0] + ' ' + p0[1] + 'C' + c1[0] + ' ' + c1[1] + ' ' + c2[0] + ' ' + c2[1] + ' ' + pe[0] + ' ' + pe[1];
   o.line.setAttribute('d', d); o.hit.setAttribute('d', d);
   const ux = -nb[0], uy = -nb[1], hw = al * 0.45;
@@ -997,6 +1187,7 @@ function renderAll() {
   emptyEl.classList.toggle('on', !P.cards.length);
   projName.textContent = P.name;
   updateHistBtns();
+  needDraw(); fire('render');
 }
 
 /* ---------- выделение ---------- */
@@ -1018,6 +1209,7 @@ function setSel(ids, edgeId, groupId) {
     if (selEdge) { const o = edgeEls.get(selEdge); if (o) { o.g.classList.add('sel'); o.lab.classList.add('sel'); } }
   }
   refreshHighlights(); updateGroupBtns();
+  needDraw(); fire('select');
 }
 function refreshHighlights() {
   const hl = new Set();
@@ -1031,7 +1223,9 @@ function raise(id) { const el = cardEls.get(id); if (el) el.style.zIndex = ++zTo
 let raf = 0, lastT = 0, forceView = true, mmDirty = true, scaleDirty = true, settleT = 0, lod = 'full', shownS = -1;
 let moveDirty = false;
 const ptr = { x: innerWidth / 2, y: innerHeight / 2, inside: false };
-let nextFrame = 0;
+let nextFrame = 0, redrawGL = false;
+// модулям (WebGL) нужен кадр: рисуем в общем цикле, с тем же потолком FPS
+function needDraw() { redrawGL = true; schedule(); }
 function schedule() { if (!raf) { lastT = performance.now(); raf = requestAnimationFrame(tick); } }
 function lodFor(s) { return s >= 0.5 ? 'full' : s >= 0.32 ? 'far' : s >= 0.18 ? 'xfar' : 'dot'; }
 function applyView() {
@@ -1040,7 +1234,7 @@ function applyView() {
     shownS = view.s; scaleDirty = true;
     zoomLabel.textContent = Math.round(view.s * 100) + '%';
     const nl = lodFor(view.s);
-    if (nl !== lod) { lod = nl; world.className = 'lod-' + lod; hideTip(); }
+    if (nl !== lod) { lod = nl; world.className = 'lod-' + lod; hideTip(); fire('lod', lod); }
     const b = Math.round(Math.log2(view.s) * 4);
     if (b !== arrowBucket) {
       arrowBucket = b; inv = Math.pow(2, -b / 4);
@@ -1051,7 +1245,7 @@ function applyView() {
     clearTimeout(settleT); settleT = setTimeout(reraster, 200);
   }
   cull();
-  mmDirty = true;
+  mmDirty = true; redrawGL = true;
 }
 function reraster() {
   // will-change фиксирует разрешение растра; после остановки зума переснимаем в текущем масштабе
@@ -1103,10 +1297,11 @@ function tick(now) {
     dirtyCards.clear();
     for (const e of moved) layoutEdge(e);
     for (const gid of regs) { const g = gById(gid); if (g) refitGroup(g); }
-    cull(); mmDirty = true;
+    cull(); mmDirty = true; redrawGL = true;
   }
   if (tipFor) placeTip();
   if (mmDirty) { mmDirty = false; drawMinimap(); }
+  if (redrawGL) { redrawGL = false; fire('draw'); }
   if (more || drag) { if (more) schedule(); }
 }
 function zoomAt(ax, ay, f) {
@@ -1219,6 +1414,15 @@ cardsLayer.addEventListener('pointerover', e => {
   const el = e.target.closest('.card'); if (el) showTip(cardMap.get(el.dataset.id));
 });
 cardsLayer.addEventListener('pointerout', e => { if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.card')) hideTip(); });
+// WebGL-режим: DOM-карточек на экране нет, карточку под курсором ищет модуль gl.js
+let glHit = null;
+const glOn = () => viewport.classList.contains('gl-on');
+const hitAt = (x, y) => (glOn() && glHit ? glHit(x, y) : null);
+viewport.addEventListener('pointermove', e => {
+  if (!glOn() || drag) return;
+  const c = hitAt(e.clientX, e.clientY);
+  if (c && c !== tipFor) showTip(c); else if (!c && tipFor) hideTip();
+});
 
 /* ---------- ввод: указатель ---------- */
 let drag = null, spaceDown = false, lastMoved = 0;
@@ -1240,6 +1444,7 @@ viewport.addEventListener('pointerdown', e => {
   const gh = !cardEl && t.closest && t.closest('.g-tab,.g-h');
   if (gh && (t.closest('.g-x') || (t.closest('.g-title') && t.closest('.g-title').isContentEditable))) return;
   const pan = e.button === 1 || spaceDown;
+  const glc = !cardEl && !gh && !pan ? hitAt(e.clientX, e.clientY) : null;
   if (port && e.button === 0 && !pan) {
     const c = cardMap.get(cardEl.dataset.id);
     drag = { type: 'link', c, side: port.dataset.side, px: e.clientX, py: e.clientY, sx: e.clientX, sy: e.clientY, over: null };
@@ -1260,9 +1465,9 @@ viewport.addEventListener('pointerdown', e => {
     const edges = new Set();
     ms.forEach(m => { const s = incident.get(m.id); if (s) s.forEach(x => edges.add(x)); });
     drag = { type: 'card', c: null, grp: g, items, edges, sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, moved: false, pre: null, shift: false };
-  } else if (cardEl) {
-    if (t.closest(EDITABLE + ',video,audio,button,a,.c-yt iframe')) return;
-    const c = cardMap.get(cardEl.dataset.id);
+  } else if (cardEl || glc) {
+    if (cardEl && t.closest(EDITABLE + ',video,audio,button,a,.c-yt iframe')) return;
+    const c = glc || cardMap.get(cardEl.dataset.id);
     if (e.shiftKey) { const n = new Set(sel); n.has(c.id) ? n.delete(c.id) : n.add(c.id); setSel(n); if (!n.has(c.id)) return; }
     else if (!sel.has(c.id)) setSel([c.id]);
     raise(c.id);
@@ -1312,7 +1517,7 @@ function applyDrag() {
       for (const m of d.gmov) { m.g._r.x = m.x0 + wx; m.g._r.y = m.y0 + wy; placeGroup(m.g); }
       if (P.groups.length) updateDragTargets(d);
       for (const e of d.edges) layoutEdge(e);
-      cull(); mmDirty = true;
+      cull(); mmDirty = true; redrawGL = true;
       break;
     }
     case 'resize': {
@@ -1431,7 +1636,7 @@ viewport.addEventListener('wheel', e => {
 function addCard(type, content, wx, wy, extra) {
   extra = extra || {};
   const T = TYPES[type] || TYPES.text;
-  const c = Object.assign({ id: genId(), x: Math.round(wx - T.w / 2), y: Math.round(wy - 40), w: T.w, title: T.title, content: content || '', type }, extra);
+  const c = Object.assign({ id: genId(), created: Date.now(), x: Math.round(wx - T.w / 2), y: Math.round(wy - 40), w: T.w, title: T.title, content: content || '', type }, extra);
   if (!('x' in extra)) for (let i = 0; i < 20 && P.cards.some(o => Math.abs(o.x - c.x) < 24 && Math.abs(o.y - c.y) < 24); i++) { c.x += 36; c.y += 36; }
   if (!extra._noCp) checkpoint();
   const edit = c._edit; delete c._edit; delete c._noCp;
@@ -1592,9 +1797,42 @@ viewport.addEventListener('click', e => {
   if (btn && btn.dataset.act === 'more') {
     checkpoint(); c.expanded = !c.expanded; cardEl.classList.toggle('expanded', c.expanded); measureMore(cardEl, c); dirtyCards.add(c.id); touch(); return;
   }
+  if (btn && btn.dataset.act === 'preview') { fetchPreview(c); return; }
+  if (btn && btn.dataset.act === 'att-open') { invoke('att_open', { file: attFile(c.content) }).catch(err => toast('Не открылось: ' + err)); return; }
+  if (btn && btn.dataset.act === 'att-save') { saveAttAs(c); return; }
   const yt = t.closest('.c-yt');
   if (yt && performance.now() - lastMoved > 250 && !yt.querySelector('iframe')) openYoutube(yt);
 });
+async function saveAttAs(c) {
+  try {
+    const path = await invoke('plugin:dialog|save', { options: { title: 'Сохранить файл', defaultPath: c.filename || c.title || attFile(c.content) } });
+    if (!path) return;
+    await invoke('att_export', { file: attFile(c.content), path });
+    toast('Сохранено: ' + baseName(path));
+  } catch (err) { toast('Не удалось сохранить: ' + err); }
+}
+// превью ссылки: заголовок, описание и картинка страницы (качает Rust, картинка ложится во вложения)
+async function fetchPreview(c) {
+  if (!DESK || c.type !== 'link' || c._loading) return;
+  c._loading = true; refreshCardBody(c);
+  try {
+    const pv = await invoke('link_preview', { url: c.content });
+    let host = ''; try { host = new URL(c.content).hostname.replace(/^www\./, ''); } catch (_) {}
+    c.preview = { title: pv.title || '', description: pv.description || '', site: pv.site || host, image: pv.image ? 'att:' + pv.image : '' };
+    if (pv.title && (!c.title || c.title === host)) { c.title = pv.title; const el = cardEls.get(c.id); if (el) $('.c-title', el).textContent = c.title; }
+  } catch (err) { toast('Превью не загрузилось: ' + err); }
+  c._loading = false;
+  if (cardMap.get(c.id) === c) { refreshCardBody(c); touch(); }
+}
+// превью PDF: первая страница и число страниц (рисует сама Windows)
+async function fetchPdf(c) {
+  if (!DESK || c.type !== 'pdf' || !isAtt(c.content)) return;
+  c._loading = true; refreshCardBody(c);
+  try { const r = await invoke('pdf_info', { file: attFile(c.content) }); c.thumb = 'att:' + r.thumb; c.pages = r.pages; }
+  catch (err) { toast(String(err)); }
+  c._loading = false;
+  if (cardMap.get(c.id) === c) { refreshCardBody(c); touch(); }
+}
 function openYoutube(yt) {
   const id = yt.dataset.yt;
   const ok = /^https?:$/.test(location.protocol) && location.origin !== 'null';
@@ -1613,6 +1851,8 @@ viewport.addEventListener('dblclick', e => {
   const gtab = t.closest('.g-tab');
   if (gtab) { if (!t.closest('.g-x')) startGroupEdit(gById(gtab.closest('.gf').dataset.id), true); return; }
   if (t.closest('.gf')) return;
+  const gc = !t.closest('.card') ? hitAt(e.clientX, e.clientY) : null;
+  if (gc) { flyTo(gc); return; }
   const cardEl = t.closest('.card');
   if (cardEl) {
     const c = cardMap.get(cardEl.dataset.id);
@@ -1645,7 +1885,9 @@ function textToCard(text, w, off) {
   if (yt && /^https?:\/\/\S+$/.test(text)) return addCard('youtube', yt[1], x, y, { title: 'YouTube' });
   if (/^https?:\/\/\S+$/.test(text)) {
     let host = text; try { host = new URL(text).hostname.replace(/^www\./, ''); } catch (_) {}
-    return addCard('link', text, x, y, { title: host });
+    const c = addCard('link', text, x, y, { title: host });
+    fetchPreview(c);
+    return c;
   }
   const lines = text.split('\n'); const first = lines[0].trim();
   if (lines.length === 1 && text.length <= 90) return addCard('text', '', x, y, { title: text });
@@ -1671,7 +1913,47 @@ async function imageDataURL(file) {
 }
 // на десктопе данные лежат в файле, а не в localStorage, поэтому потолок выше
 const BIG = (DESK ? 16 : 1.2) * 1024 * 1024;
+// карточка под вложение (десктоп): тип по расширению, PDF сразу получает превью
+function attCard(info, x, y) {
+  const kind = kindByExt(extOf(info.name)), base = info.name.replace(/\.[^.]+$/, '');
+  const c = addCard(kind, 'att:' + info.file, x, y, { title: base || TYPES[kind].title, filename: info.name, size: info.size });
+  if (kind === 'pdf') fetchPdf(c);
+  return c;
+}
+// десктоп, вставка из буфера: байты во вложения, без лимита по размеру
+async function filesToCardsDesk(files, w) {
+  let off = 0;
+  for (const f of files) {
+    const x = w.x + off, y = w.y + off, name = f.name || (f.type.startsWith('image/') ? 'image.' + (MIME_EXT[f.type] || 'png') : 'file');
+    const base = name.replace(/\.[^.]+$/, '');
+    try {
+      if (/\.polotno$/i.test(name)) { await importText(await fileToText(f), name); continue; }
+      if (/\.(md|markdown)$/i.test(name)) addCard('markdown', await fileToText(f), x, y, { title: base, filename: name });
+      else if (/\.txt$/i.test(name)) addCard('text', await fileToText(f), x, y, { title: base });
+      else attCard(await attSaveBytes(new Uint8Array(await f.arrayBuffer()), name), x, y);
+    } catch (err) { toast('«' + name + '» не добавился: ' + err); }
+    off += 36;
+  }
+}
+// десктоп, перетаскивание из проводника: Rust копирует файлы по путям, в память они не грузятся
+async function pathsToCards(paths, w) {
+  let off = 0;
+  const media = [];
+  for (const p of paths) {
+    const e = extOf(p), name = baseName(p), base = name.replace(/\.[^.]+$/, '');
+    if (e === 'polotno') { await openPath(p); continue; }
+    if (e === 'md' || e === 'markdown' || e === 'txt') {
+      try { const text = await invoke('read_text', { path: p }); addCard(e === 'txt' ? 'text' : 'markdown', text, w.x + off, w.y + off, { title: base, filename: name }); off += 36; }
+      catch (err) { toast('«' + name + '» не прочитался: ' + err); }
+    } else media.push(p);
+  }
+  if (!media.length) return;
+  setStatus('busy', 'копирую файлы…');
+  try { for (const info of await invoke('att_import', { paths: media })) { attCard(info, w.x + off, w.y + off); off += 36; } }
+  catch (err) { toast('Не скопировалось: ' + err); setStatus('', 'сохранено'); }
+}
 async function filesToCards(files, w) {
+  if (DESK) return filesToCardsDesk(files, w);
   let off = 0;
   for (const f of files) {
     const x = w.x + off, y = w.y + off, name = f.name || '';
@@ -1729,13 +2011,23 @@ addEventListener('drop', async e => {
 /* ---------- полотна ---------- */
 const pmenu = $('#pmenu');
 function closePmenu() { pmenu.hidden = true; }
-function renderPmenu() {
+const ICON_WIN = '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="13" height="11" rx="2"/><path d="M8 19h11a2 2 0 0 0 2-2V9"/></svg>';
+let openElsewhere = {};
+async function renderPmenu() {
+  if (DESK) {
+    // какие полотна открыты в других окнах: их не открыть здесь, но можно показать то окно
+    try { const m = await invoke('open_projects'), me = TAURI.window.getCurrentWindow().label; openElsewhere = {}; for (const k in m) if (m[k] !== me) openElsewhere[k] = m[k]; } catch (_) {}
+  }
   pmenu.innerHTML = '<div class="lab">Полотна</div>';
   for (const p of S.projects) {
     const it = document.createElement('div');
+    const away = !!openElsewhere[p.id];
     it.className = 'pi' + (p.id === S.pid ? ' on' : ''); it.tabIndex = 0;
-    it.innerHTML = '<span class="n" spellcheck="false"></span><button class="a" data-a="ren" aria-label="Переименовать" title="Переименовать">' + ICON.edit + '</button><button class="a" data-a="del" aria-label="Удалить" title="Удалить">' + ICON.trash + '</button>';
+    it.innerHTML = '<span class="n" spellcheck="false"></span>'
+      + (DESK ? '<button class="a" data-a="win" aria-label="В отдельном окне" title="' + (away ? 'Открыто в другом окне: показать' : 'Открыть в новом окне') + '"' + (away ? ' style="opacity:1;color:var(--acid)"' : '') + '>' + ICON_WIN + '</button>' : '')
+      + '<button class="a" data-a="ren" aria-label="Переименовать" title="Переименовать">' + ICON.edit + '</button><button class="a" data-a="del" aria-label="Удалить" title="Удалить">' + ICON.trash + '</button>';
     const n = $('.n', it); n.textContent = p.name;
+    if (away) n.style.opacity = '.6';
     const startRename = () => {
       n.contentEditable = 'plaintext-only'; if (n.contentEditable !== 'plaintext-only') n.contentEditable = 'true';
       n.focus(); const r = document.createRange(); r.selectNodeContents(n); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
@@ -1744,22 +2036,37 @@ function renderPmenu() {
       if (!n.isContentEditable) return;
       n.removeAttribute('contenteditable');
       const v = n.textContent.replace(/\s+/g, ' ').trim() || p.name;
-      p.name = v; n.textContent = v; if (p.id === S.pid) projName.textContent = v; touch();
+      p.name = v; n.textContent = v; if (p.id === S.pid) { projName.textContent = v; setTitle(); touch(); }
+      saveIndex();
     });
     n.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); n.blur(); } if (e.key === 'Escape') { n.textContent = p.name; n.blur(); } });
     it.addEventListener('click', async e => {
       const a = e.target.closest('.a');
       if (a && a.dataset.a === 'ren') { startRename(); return; }
+      if (a && a.dataset.a === 'win') {
+        closePmenu();
+        if (p.id === S.pid) {
+          // текущее полотно уезжает в новое окно, здесь открываем другое свободное
+          const other = S.projects.find(x => x.id !== p.id && !openElsewhere[x.id]);
+          if (!other) { toast('Это полотно уже здесь, а других свободных нет'); return; }
+          await openProject(other.id);
+        }
+        invoke('open_window', { project: p.id }).catch(err => toast('Окно не открылось: ' + err));
+        return;
+      }
       if (a && a.dataset.a === 'del') {
         if (S.projects.length <= 1) { toast('Последнее полотно не удаляю'); return; }
-        const r = await ask('Удалить полотно «' + p.name + '»? Карточки уйдут вместе с ним. Если что, есть экспорт.', ['Удалить', 'Оставить']);
+        if (openElsewhere[p.id]) { toast('Оно открыто в другом окне, закрой его сначала'); return; }
+        const r = await ask('Удалить полотно «' + p.name + '»? Карточки уйдут вместе с ним. Если что, есть экспорт и бэкапы.', ['Удалить', 'Оставить']);
         if (r !== 0) return;
         S.projects = S.projects.filter(x => x.id !== p.id); hists.delete(p.id);
-        if (S.pid === p.id) openProject(S.projects[0].id); else persist();
+        if (DESK) queue(() => invoke('project_delete', { id: p.id }).catch(() => {}));
+        if (S.pid === p.id) { const next = S.projects.find(x => !openElsewhere[x.id]) || S.projects[0]; await openProject(next.id); }
+        saveIndex();
         renderPmenu(); return;
       }
       if (n.isContentEditable) return;
-      if (p.id !== S.pid) { openProject(p.id); closePmenu(); }
+      if (p.id !== S.pid) { closePmenu(); await openProject(p.id); }
     });
     n.addEventListener('dblclick', e => { e.stopPropagation(); startRename(); });
     it.addEventListener('keydown', e => { if (e.target === it && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (p.id !== S.pid) { openProject(p.id); closePmenu(); } } });
@@ -1767,23 +2074,44 @@ function renderPmenu() {
   }
   const add = document.createElement('button');
   add.className = 'padd'; add.innerHTML = ICON.plus + 'Новое полотно';
-  add.addEventListener('click', () => {
+  add.addEventListener('click', async () => {
     const p = normalize({ id: genId(), name: 'Новое полотно', cards: [], edges: [] });
-    S.projects.push(p); openProject(p.id); renderPmenu();
-    const items = pmenu.querySelectorAll('.pi'); const last = items[items.length - 1];
-    if (last) $('.a', last).click();
+    S.projects.push(p); await saveProjectFile(p); await openProject(p.id); saveIndex(); await renderPmenu();
+    const last = [...pmenu.querySelectorAll('.pi')].pop();
+    if (last) $('.a[data-a="ren"]', last).click();
   });
   pmenu.appendChild(add);
 }
-function openProject(id) {
-  const p = S.projects.find(x => x.id === id); if (!p) return;
+// открыть полотно в этом окне. Десктоп: сначала «занимаем» его (в другом окне оно не откроется),
+// потом читаем свежую версию с диска
+let opening = null;
+async function openProject(id) {
+  let p = S.projects.find(x => x.id === id); if (!p) return false;
   endEdit(); endEdgeEdit(true); endGroupEdit(true);
-  if (P && P !== p) P.view = { x: target.x, y: target.y, scale: target.s };
+  if (DESK) {
+    if (opening) await opening;
+    let done; opening = new Promise(r => { done = r; });
+    try {
+      const other = await invoke('claim_project', { id });
+      if (other) { toast('«' + p.name + '» открыто в другом окне'); return false; }
+      if (P && P !== p) await persist();
+      const raw = await invoke('project_load', { id }).catch(() => null);
+      const fresh = raw ? normalize(JSON.parse(raw)) : normalize({ id, name: p.name, cards: [], edges: [] });
+      fresh.name = p.name;
+      const i = S.projects.findIndex(x => x.id === id);
+      if (i >= 0) S.projects[i] = fresh; else S.projects.push(fresh);
+      p = fresh;
+      if (await migrateDataUrls(p)) await saveProjectFile(p);
+    } finally { opening = null; done(); }
+  } else if (P && P !== p) P.view = { x: target.x, y: target.y, scale: target.s };
   P = p; S.pid = id; sel = new Set(); selEdge = null; selGroup = null;
   renderAll();
   const v = p.view && typeof p.view.scale === 'number' ? p.view : null;
   if (v) jumpView(v.x, v.y, clamp(v.scale, MIN_S, MAX_S), true); else fit(P.cards, true);
-  persist();
+  setTitle();
+  if (DESK) saveIndex(); else persist();
+  fire('project', P);
+  return true;
 }
 $('#projBtn').addEventListener('click', e => {
   e.stopPropagation();
@@ -1815,23 +2143,32 @@ function ask(msg, buttons) {
 
 /* ---------- экспорт / импорт ---------- */
 let exporting = false;
-async function doExport() {
-  persist();
-  const data = JSON.stringify(workspace(), stripPriv, 2);
+// Десктоп: .polotno — zip с рабочей областью и вложениями; .json — для сайта, вложения внутри как data: URL.
+// site: true — сразу предложить JSON для сайта
+async function doExport(opts) {
+  opts = opts || {};
   if (DESK) {
     if (exporting) return; exporting = true;
     try {
+      const day = new Date().toISOString().slice(0, 10);
       const path = await invoke('plugin:dialog|save', { options: {
-        title: 'Сохранить Полотно', filters: FILE_FILTERS,
-        defaultPath: 'polotno-' + new Date().toISOString().slice(0, 10) + '.' + FILE_EXT
+        title: opts.site ? 'JSON для kobyla.by' : 'Сохранить Полотно',
+        filters: opts.site ? [FILE_FILTERS[1]] : FILE_FILTERS,
+        defaultPath: 'polotno-' + day + '.' + (opts.site ? 'json' : FILE_EXT)
       } });
       if (!path) return;
-      await invoke('write_text', { path, data });
+      setStatus('busy', 'сохраняю файл…');
+      const ws = await fullWorkspace();
+      if (/\.json$/i.test(path)) await invoke('write_text', { path, data: JSON.stringify(await inlineAtts(ws), null, 2) });
+      else await invoke('polotno_export', { path, data: JSON.stringify(ws, stripPriv) });
+      setStatus('', 'сохранено');
       toast('Сохранено: ' + baseName(path));
-    } catch (err) { toast('Не удалось сохранить: ' + err); }
+    } catch (err) { setStatus('', 'сохранено'); toast('Не удалось сохранить: ' + err); }
     finally { exporting = false; }
     return;
   }
+  persist();
+  const data = JSON.stringify(workspace(), stripPriv, 2);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
   a.download = 'polotno-workspace-' + new Date().toISOString().slice(0, 10) + '.json';
@@ -1839,11 +2176,12 @@ async function doExport() {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast('JSON скачан');
 }
-$('#exportBtn').addEventListener('click', doExport);
+$('#exportBtn').addEventListener('click', () => (exportMenu ? exportMenu() : doExport()));
+let exportMenu = null; // меню экспорта ставит js/export.js
 async function openPath(path) {
   if (!path) return;
   let text;
-  try { text = await invoke('read_text', { path }); } catch (err) { toast('Не открылся файл: ' + err); return; }
+  try { text = await invoke('polotno_import', { path }); } catch (err) { toast('Не открылся файл: ' + err); return; }
   await importText(text, baseName(path));
 }
 $('#importBtn').addEventListener('click', async () => {
@@ -1860,20 +2198,32 @@ $('#imp').addEventListener('change', async e => {
 async function importText(text, fname) {
   let d;
   try { d = JSON.parse(text); } catch (err) { toast('Файл не читается как JSON'); return; }
+  // десктоп: полотна из файла сохраняем по файлам, data: URL переносим во вложения
+  const store = async ps => { for (const p of ps) { await migrateDataUrls(p); await saveProjectFile(p); } };
   if (d && Array.isArray(d.projects) && d.projects.length) {
-    const r = await ask('В файле полотен: ' + d.projects.length + '. Заменить всё текущее или добавить рядом?', ['Заменить всё', 'Добавить рядом', 'Отмена']);
+    // «заменить всё» на десктопе, только если других окон нет: они держат свои полотна
+    let others = 0;
+    if (DESK) { try { const m = await invoke('open_projects'), me = TAURI.window.getCurrentWindow().label; others = Object.values(m).filter(l => l !== me).length; } catch (_) {} }
+    const btns = others ? ['Добавить рядом', 'Отмена'] : ['Заменить всё', 'Добавить рядом', 'Отмена'];
+    let r = await ask('В файле полотен: ' + d.projects.length + '. ' + (others ? 'Добавить их рядом с текущими?' : 'Заменить всё текущее или добавить рядом?'), btns);
+    if (others && r >= 0) r += 1;
     if (r === 0) {
-      S.projects = d.projects.map(normalize); hists.clear();
+      const old = S.projects.map(p => p.id);
+      const ps = d.projects.map(normalize); await store(ps);
+      if (DESK) for (const id of old) if (!ps.some(p => p.id === id)) await queue(() => invoke('project_delete', { id }).catch(() => {}));
+      S.projects = ps; hists.clear();
       const id = S.projects.some(p => p.id === d.currentProject) ? d.currentProject : S.projects[0].id;
-      P = null; openProject(id); toast('Импортировано');
+      P = null; await openProject(id); saveIndex(); toast('Импортировано');
     } else if (r === 1) {
       const have = new Set(S.projects.map(p => p.id));
       const added = d.projects.map(normalize).map(p => { if (have.has(p.id)) p.id = genId(); return p; });
-      S.projects.push(...added); openProject(added[0].id); toast('Добавлено полотен: ' + added.length);
+      await store(added);
+      S.projects.push(...added); await openProject(added[0].id); saveIndex(); toast('Добавлено полотен: ' + added.length);
     }
   } else if (d && Array.isArray(d.cards)) {
     const p = normalize({ id: genId(), name: (fname || 'Импорт').replace(/\.(json|polotno)$/i, ''), cards: d.cards, edges: d.edges || [] });
-    S.projects.push(p); openProject(p.id); toast('Полотно добавлено');
+    await store([p]);
+    S.projects.push(p); await openProject(p.id); saveIndex(); toast('Полотно добавлено');
   } else toast('Не похоже на файл Полотна');
 }
 
@@ -1911,7 +2261,7 @@ addEventListener('keydown', e => {
   }
   if (e.key === 'Escape') {
     if (drag && drag.type === 'link') endDrag(e, true);
-    if (!pmenu.hidden) closePmenu(); else if (!keysEl.hidden) keysEl.hidden = true; else setSel([]);
+    if (!menuEl.hidden) closeMenu(); else if (!pmenu.hidden) closePmenu(); else if (!keysEl.hidden) keysEl.hidden = true; else setSel([]);
     return;
   }
   if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -1974,36 +2324,135 @@ function deskHooks() {
     if (e.key === 'F5' || (mod && (k === 'r' || k === 'p' || k === 'u')) || e.key === 'F7') e.preventDefault();
     if (mod && k === 'o' && $('#dlg').hidden) { e.preventDefault(); $('#importBtn').click(); }
   }, true);
-  // двойной клик по .polotno, когда окно уже открыто
+  // двойной клик по .polotno, когда окно уже открыто (Rust шлёт событие окну, которое было в фокусе)
   TAURI.event.listen('open-file', ev => openPath(ev.payload));
+  // список полотен поменялся в другом окне
+  TAURI.event.listen('index-changed', ev => applyIndex(ev.payload));
+  // откат к бэкапу: всё перечитываем с диска
+  TAURI.event.listen('workspace-restored', async () => {
+    hists.clear(); P = null;
+    S.projects = [];
+    const idx = await invoke('ws_index').catch(() => null);
+    if (idx) applyIndex(idx);
+    const ok = S.projects.length && (await openProject(S.pid && S.projects.some(p => p.id === S.pid) ? S.pid : S.projects[0].id));
+    if (!ok) for (const p of S.projects) if (await openProject(p.id)) break;
+    toast('Рабочая область восстановлена из бэкапа');
+  });
+  // файлы из проводника: Tauri отдаёт пути, Rust копирует их во вложения
+  const dpr = () => window.devicePixelRatio || 1;
+  TAURI.webview.getCurrentWebview().onDragDropEvent(ev => {
+    const t = ev.payload.type;
+    if (t === 'enter' || t === 'over') dropEl.classList.add('on');
+    else if (t === 'leave') dropEl.classList.remove('on');
+    else if (t === 'drop') {
+      dropEl.classList.remove('on');
+      const pos = ev.payload.position || { x: vw * dpr() / 2, y: vh * dpr() / 2 };
+      const paths = ev.payload.paths || [];
+      if (paths.length) pathsToCards(paths, toWorld(pos.x / dpr(), pos.y / dpr()));
+    }
+  });
   // перед закрытием дописываем несохранённое
   TAURI.window.getCurrentWindow().onCloseRequested(async () => {
     endEdit(); endEdgeEdit(false); endGroupEdit(false);
-    try { await persist(); } catch (_) {}
+    try { await persist(); await diskQ; } catch (_) {}
   });
 }
 
+/* ---------- меню, кнопки и клавиши для модулей ---------- */
+const menuEl = $('#menu');
+let menuFor = null;
+function closeMenu() { menuEl.hidden = true; menuFor = null; }
+// items: { label, icon, key, on, disabled, active } | { sep: true } | { lab: 'Заголовок' }
+function openMenu(anchor, items) {
+  if (menuFor === anchor && !menuEl.hidden) { closeMenu(); return; }
+  menuEl.innerHTML = '';
+  for (const it of items) {
+    if (it.sep) { const s = document.createElement('div'); s.className = 'sepm'; menuEl.appendChild(s); continue; }
+    if (it.lab) { const s = document.createElement('div'); s.className = 'lab'; s.textContent = it.lab; menuEl.appendChild(s); continue; }
+    const b = document.createElement('button');
+    b.className = 'mi' + (it.active ? ' on' : ''); b.disabled = !!it.disabled;
+    b.innerHTML = (it.icon || '') + '<span></span>' + (it.key ? '<span class="k">' + esc(it.key) + '</span>' : '');
+    b.children[it.icon ? 1 : 0].textContent = it.label;
+    b.addEventListener('click', () => { closeMenu(); it.on && it.on(); });
+    menuEl.appendChild(b);
+  }
+  menuEl.hidden = false; menuFor = anchor;
+  const r = anchor.getBoundingClientRect(), mw = menuEl.offsetWidth;
+  const left = r.left + mw > innerWidth - 8 ? r.right - mw : r.left;
+  menuEl.style.left = Math.max(8, left) + 'px'; menuEl.style.top = (r.bottom + 8) + 'px';
+}
+document.addEventListener('pointerdown', e => { if (!menuEl.hidden && !menuEl.contains(e.target) && !(menuFor && menuFor.contains(e.target))) closeMenu(); });
+// кнопка в панели: where 'c' — центр (инструменты), 'r' — справа (файлы)
+function addTool(o) {
+  const b = document.createElement('button');
+  b.className = 'btn'; if (o.id) b.id = o.id;
+  b.dataset.tip = o.tip || ''; b.setAttribute('aria-label', o.tip || o.label || '');
+  b.innerHTML = o.icon + (o.label ? '<span class="lb">' + esc(o.label) + '</span>' : '');
+  b.addEventListener('click', e => o.on(b, e));
+  $(o.where === 'r' ? '#toolsR' : '#tools').appendChild(b);
+  return b;
+}
+function addKey(label, keys) {
+  const row = document.createElement('div'); row.className = 'row';
+  row.innerHTML = '<span></span><span>' + keys + '</span>'; row.firstChild.textContent = label;
+  keysEl.insertBefore(row, $('.foot', keysEl));
+}
+
+/* ---------- API для модулей из js/ ---------- */
+const api = {
+  DESK, TAURI, invoke: DESK ? invoke : null, $, esc, clamp, genId, idTime, ICON, TYPES, TCOL, GPAD,
+  get P() { return P; }, S, view, target, get vw() { return vw; }, get vh() { return vh; }, get lod() { return lod; }, get inv() { return inv; },
+  get sel() { return sel; }, get selEdge() { return selEdge; }, get selGroup() { return selGroup; },
+  cardMap, cardEls, edgeEls, groupEls, gMembers, incident, viewport, world,
+  on, fire, needDraw, schedule, setSel, select: ids => setSel(ids), flyTo, fit: (cs, instant) => fit(cs || P.cards, instant), jump: jumpView, jumpView, toWorld, zoomAt,
+  bounds, estH, edgeCurve, groupRect, gById, addCard, addEdge, removeCards, checkpoint, touch, renderAll, refreshCardBody, raise,
+  persist, saveIndex, openProject, fullWorkspace, workspace, stripPriv, normalize, toast, ask, isEditing, renderMarkdown,
+  attUrl, isAtt, attFile, baseName, extOf, kindByExt, fmtSize, doExport, setStatus, setTitle, showTip, hideTip,
+  menu: openMenu, closeMenu, addTool, addKey, group: groupSel, ungroup: ungroupSel, undo, redo, openPath, importText,
+  set glHit(f) { glHit = f; }, set exportMenu(f) { exportMenu = f; },
+  dlgOpen: () => !$('#dlg').hidden
+};
+window.__polotno = api;
+
 /* ---------- старт ---------- */
 (async () => {
-  let raw = null;
-  if (DESK) { try { raw = await invoke('load_workspace'); } catch (err) { console.error(err); } }
-  else { try { raw = localStorage.getItem(LS_KEY); } catch (_) {} }
-  load(raw);
-  renderAll();
-  {
+  if (DESK) {
+    try { attDir = await invoke('att_dir'); } catch (_) {}
+    const q = new URLSearchParams(location.search).get('p');
+    const idx = await invoke('ws_index').catch(() => null);
+    if (!idx) {
+      // первый запуск: демо-полотна
+      const seeds = seedProjects().map(normalize);
+      for (const p of seeds) await saveProjectFile(p);
+      S.projects = seeds; S.pid = seeds[0].id;
+    } else {
+      const j = applyIndex(idx) || {};
+      S.pid = q && S.projects.some(p => p.id === q) ? q : j.current;
+    }
+    const fresh = async () => { const p = normalize({ id: genId(), name: 'Новое полотно', cards: [], edges: [] }); await saveProjectFile(p); S.projects.push(p); return p.id; };
+    if (!S.projects.length) S.pid = await fresh();
+    let ok = !!S.pid && S.projects.some(p => p.id === S.pid) && (await openProject(S.pid));
+    if (!ok) for (const p of S.projects) if (p.id !== S.pid && (await openProject(p.id))) { ok = true; break; }
+    if (!ok) await openProject(await fresh());
+  } else {
+    let raw = null;
+    try { raw = localStorage.getItem(LS_KEY); } catch (_) {}
+    load(raw);
+    renderAll();
     const v = P.view && typeof P.view.scale === 'number' ? P.view : null;
     if (v) jumpView(v.x, v.y, clamp(v.scale, MIN_S, MAX_S), true); else fit(P.cards, true);
+    setTitle();
+    persist();
   }
   setStatus('', 'сохранено');
-  persist();
+  if (DESK) deskHooks();
+  // модули: поиск, виды, экспорт, презентация, подсказки связей, WebGL, окна и бэкапы
+  for (const m of window.PolotnoExt || []) { try { m(api); } catch (e) { console.error(e); } }
   if (DESK) {
-    deskHooks();
     const p = await invoke('take_pending_open').catch(() => null);
     if (p) await openPath(p);
   }
 })();
-window.__polotno = { S, view, target, fit: () => fit(P.cards, true), jump: jumpView, get P() { return P; },
-  select: ids => setSel(ids), group: groupSel, ungroup: ungroupSel, undo, redo, openProject };
 })();
 </script>
 </body>

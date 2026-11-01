@@ -15,9 +15,13 @@ The fonts are the unmodified variable-weight Latin and Cyrillic subsets from the
 
 | Component | License |
 |---|---|
-| [Tauri](https://github.com/tauri-apps/tauri) 2 and the official plugins `dialog`, `opener`, `single-instance`, `window-state` | MIT or Apache-2.0 |
+| [Tauri](https://github.com/tauri-apps/tauri) 2 and the official plugins `dialog`, `opener`, `single-instance`, `window-state`, `updater`, `process` | MIT or Apache-2.0 |
 | [serde](https://github.com/serde-rs/serde), [serde_json](https://github.com/serde-rs/json) | MIT or Apache-2.0 |
 | [base64](https://github.com/marshallpierce/rust-base64) | MIT or Apache-2.0 |
+| [reqwest](https://github.com/seanmonstar/reqwest), [rustls](https://github.com/rustls/rustls) (link previews, updates) | MIT or Apache-2.0 (rustls also ISC) |
+| [ring](https://github.com/briansmith/ring) (cryptography for rustls) | Apache-2.0 AND ISC |
+| [zip](https://github.com/zip-rs/zip2) (`.polotno` container) | MIT |
+| [windows](https://github.com/microsoft/windows-rs) (PDF previews via `Windows.Data.Pdf`) | MIT or Apache-2.0 |
 
 These crates pull in further dependencies, all under permissive licenses (mostly MIT / Apache-2.0); the full list is in `src-tauri/Cargo.lock`.
 

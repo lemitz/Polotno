@@ -1,7 +1,7 @@
 {
   "name": "polotno-desktop",
   "private": true,
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Полотно — бесконечный причинно-семантический холст, десктопная версия для Windows",
   "scripts": {
     "dev": "tauri dev",

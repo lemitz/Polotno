@@ -14,9 +14,9 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -40,23 +40,38 @@ jobs:
           if ($env:GITHUB_REF -like 'refs/tags/v*' -and $env:GITHUB_REF_NAME -ne "v$npm") { throw "Tag $env:GITHUB_REF_NAME does not match version v$npm" }
           if (-not (Select-String -Path RELEASE_NOTES.md -Pattern "^# Polotno v$([regex]::Escape($npm))$" -Quiet)) { throw "RELEASE_NOTES.md must start with '# Polotno v$npm'" }
 
+      - name: Rust tests
+        working-directory: src-tauri
+        run: cargo test --locked
+
+      # с ключом подписи собираем ещё и подпись обновления (.sig); без ключа (форки) — обычную сборку
       - name: Build Windows installer and executable
-        run: npx tauri build
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if ($env:TAURI_SIGNING_PRIVATE_KEY) { npx tauri build --config src-tauri/tauri.updater.conf.json }
+          else { Write-Warning 'No signing key: building without updater signature'; npx tauri build }
 
       - name: Prepare release assets
         shell: pwsh
         run: |
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $nsis = "src-tauri/target/release/bundle/nsis"
           New-Item -ItemType Directory -Path release -Force | Out-Null
-          Copy-Item -LiteralPath "src-tauri/target/release/bundle/nsis/Polotno_${version}_x64-setup.exe" -Destination "release/Polotno_${version}_x64-setup.exe" -ErrorAction Stop
+          Copy-Item -LiteralPath "$nsis/Polotno_${version}_x64-setup.exe" -Destination "release/Polotno_${version}_x64-setup.exe" -ErrorAction Stop
           Copy-Item -LiteralPath 'src-tauri/target/release/polotno.exe' -Destination "release/Polotno_${version}_x64-portable.exe" -ErrorAction Stop
+          if (Test-Path "$nsis/Polotno_${version}_x64-setup.exe.sig") {
+            Copy-Item -LiteralPath "$nsis/Polotno_${version}_x64-setup.exe.sig" -Destination "release/Polotno_${version}_x64-setup.exe.sig"
+          }
           $hashes = Get-ChildItem release/*.exe | Sort-Object Name | ForEach-Object {
             $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($_.Name)"
           }
           [System.IO.File]::WriteAllText((Join-Path $PWD 'release/SHA256SUMS.txt'), ($hashes -join "`n") + "`n", [System.Text.Encoding]::ASCII)
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: polotno-windows
           path: release/
@@ -69,8 +84,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: polotno-windows
           path: release
@@ -79,12 +94,27 @@ jobs:
         working-directory: release
         run: sha256sum -c SHA256SUMS.txt
 
+      # latest.json — то, что читает автообновление установленных копий
+      - name: Updater manifest (latest.json)
+        run: |
+          version=$(node -p "require('./package.json').version")
+          sig="release/Polotno_${version}_x64-setup.exe.sig"
+          test -f "$sig" || { echo "::error::no updater signature: set the TAURI_SIGNING_PRIVATE_KEY secret"; exit 1; }
+          VERSION="$version" SIG="$(cat "$sig")" REPO="$GITHUB_REPOSITORY" TAG="$GITHUB_REF_NAME" node -e '
+            const fs = require("fs");
+            const notes = fs.readFileSync("RELEASE_NOTES.md", "utf8").split("\n").slice(1).join("\n").trim();
+            const m = { version: process.env.VERSION, notes, pub_date: new Date().toISOString(),
+              platforms: { "windows-x86_64": { signature: process.env.SIG,
+                url: `https://github.com/${process.env.REPO}/releases/download/${process.env.TAG}/Polotno_${process.env.VERSION}_x64-setup.exe` } } };
+            fs.writeFileSync("release/latest.json", JSON.stringify(m, null, 2));'
+          cat release/latest.json
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(node -p "require('./package.json').version")
-          assets=("release/Polotno_${version}_x64-setup.exe" "release/Polotno_${version}_x64-portable.exe" "release/SHA256SUMS.txt")
+          assets=("release/Polotno_${version}_x64-setup.exe" "release/Polotno_${version}_x64-setup.exe.sig" "release/Polotno_${version}_x64-portable.exe" "release/SHA256SUMS.txt" "release/latest.json")
           if gh release view "$GITHUB_REF_NAME" --json tagName >/dev/null 2>&1; then
             gh release upload "$GITHUB_REF_NAME" "${assets[@]}" --clobber
           else
