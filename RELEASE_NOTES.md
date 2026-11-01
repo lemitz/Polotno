@@ -1,19 +1,20 @@
-# Polotno v0.5.2
+# Polotno v0.5.3
 
-Automatic updates now work wherever Polotno is installed.
+Dragging no longer gets stuck on link cards.
 
 ## Changes
 
-- **Updates for any install folder.** 0.5.0 and 0.5.1 only recognised an installation in the default folder (`%LOCALAPPDATA%\Polotno`). Installed anywhere else, for example on another drive, the app took itself for the portable version and never checked for updates. Now an installation is recognised by the uninstaller next to the program, so updates work in any folder.
+- **Link cards can be dragged by their preview.** Before, grabbing a link card by its preview (which covers most of the card) started the browser's own link drag instead of moving the card: the card jerked a few pixels and stopped, and in the desktop app the canvas could stay unresponsive to dragging until the window lost focus. Now the whole card drags as usual, and a plain click on the link still opens it.
+- The browser's own drag-and-drop is disabled inside the canvas (files from Explorer are still accepted). A drag interrupted by the window losing focus is ended cleanly.
 
-If you installed 0.5.0 or 0.5.1 into a folder of your own, install this version by hand once, over the old one (the installer remembers your folder). From then on updates arrive by themselves.
+Installed copies of 0.5.2 offer this update by themselves a few seconds after start.
 
 ## Downloads
 
-- `Polotno_0.5.2_x64-setup.exe`: per-user NSIS installer, no admin rights needed; registers the `.polotno` file type and updates itself.
-- `Polotno_0.5.2_x64-portable.exe`: portable executable, no installation required, no automatic updates.
+- `Polotno_0.5.3_x64-setup.exe`: per-user NSIS installer, no admin rights needed; registers the `.polotno` file type and updates itself.
+- `Polotno_0.5.3_x64-portable.exe`: portable executable, no installation required, no automatic updates.
 - `SHA256SUMS.txt`: checksums for both executables. `latest.json` and `.sig` are for the updater.
 
 The binaries are not code-signed, so Windows SmartScreen may show a warning. Polotno requires the Microsoft Edge WebView2 Runtime (included on Windows 11 and most up-to-date Windows 10 systems; the installer installs it if needed).
 
-To verify a download in PowerShell, run `Get-FileHash .\Polotno_0.5.2_x64-setup.exe -Algorithm SHA256` and compare the result with `SHA256SUMS.txt`.
+To verify a download in PowerShell, run `Get-FileHash .\Polotno_0.5.3_x64-setup.exe -Algorithm SHA256` and compare the result with `SHA256SUMS.txt`.

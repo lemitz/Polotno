@@ -1466,7 +1466,8 @@ viewport.addEventListener('pointerdown', e => {
     ms.forEach(m => { const s = incident.get(m.id); if (s) s.forEach(x => edges.add(x)); });
     drag = { type: 'card', c: null, grp: g, items, edges, sx: e.clientX, sy: e.clientY, px: e.clientX, py: e.clientY, moved: false, pre: null, shift: false };
   } else if (cardEl || glc) {
-    if (cardEl && t.closest(EDITABLE + ',video,audio,button,a,.c-yt iframe')) return;
+    // за ссылку (превью) карточку тоже можно тащить; клик без движения ссылку откроет
+    if (cardEl && t.closest(EDITABLE + ',video,audio,button,.c-yt iframe')) return;
     const c = glc || cardMap.get(cardEl.dataset.id);
     if (e.shiftKey) { const n = new Set(sel); n.has(c.id) ? n.delete(c.id) : n.add(c.id); setSel(n); if (!n.has(c.id)) return; }
     else if (!sel.has(c.id)) setSel([c.id]);
@@ -1619,6 +1620,16 @@ function endDrag(e, cancelled) {
   }
 }
 addEventListener('pointerup', e => { if (drag && e.pointerId === drag.id) endDrag(e, false); });
+// Нативное перетаскивание браузера внутри холста не нужно: оно обрывает наше на первых пикселях
+// (ссылки, картинки, выделенный текст), а под WebView2 с приёмом файлов ещё и залипает до потери фокуса.
+// Файлы из проводника принимает Tauri отдельно, это их не касается.
+viewport.addEventListener('dragstart', e => { if (!(e.target.closest && e.target.closest(EDITABLE))) e.preventDefault(); });
+// карточку отпустили над её же ссылкой: браузер считает это кликом. Сразу после перетаскивания клик глушим
+addEventListener('click', e => {
+  if (performance.now() - lastMoved < 300 && e.target.closest && e.target.closest('#viewport a[href]')) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, true);
+// окно потеряло фокус посреди перетаскивания (кнопку могли отпустить уже вне окна) — завершаем его
+addEventListener('blur', () => { if (drag) endDrag(null, true); });
 addEventListener('pointercancel', e => { if (drag && e.pointerId === drag.id) endDrag(e, true); });
 viewport.addEventListener('contextmenu', e => { if (drag) e.preventDefault(); });
 viewport.addEventListener('auxclick', e => { if (e.button === 1) e.preventDefault(); });
