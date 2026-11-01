@@ -18,9 +18,11 @@ body.presenting .elabel.pcur { opacity: 1; border-color: var(--acid); color: var
 body.presenting .card .port, body.presenting .card .c-rs, body.presenting .card .c-acts { display: none; }
 body.presenting .card.pcur::after { opacity: 0; }
 body.presenting #viewport { cursor: default; }
-#pr { left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; max-width: calc(100% - 24px); }
-#pr .n { font: 600 13px/1 var(--mono); color: var(--acid); white-space: nowrap; }
-#pr .cap { color: var(--dim); font-size: 14px; max-width: 46vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* ширина плашки постоянная: кнопки не прыгают от слайда к слайду, длинная подпись обрезается */
+#pr { left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; width: min(820px, calc(100% - 24px)); }
+#pr .n { flex: none; min-width: 9ch; font: 600 13px/1 var(--mono); font-variant-numeric: tabular-nums; color: var(--acid); white-space: nowrap; }
+#pr .cap { flex: 1; min-width: 0; color: var(--dim); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#pr .btn { flex: none; }
 #pr .cap b { color: var(--paper); font-weight: 600; }
 #pr .bar { position: absolute; left: 12px; right: 12px; top: 0; height: 2px; border-radius: 2px; background: var(--line); overflow: hidden; }
 #pr .bar i { display: block; height: 100%; background: var(--acid); transition: width .3s var(--ease); }
@@ -86,6 +88,7 @@ body.presenting #viewport { cursor: default; }
         : ' <span class="muted">→ ведёт к «' + esc(prev ? prev.title : '') + '»' + rel + '</span>';
     }
     $('.cap', hud).innerHTML = cap;
+    $('.cap', hud).title = $('.cap', hud).textContent;
     $('.bar i', hud).style.width = ((step + 1) / route.length * 100) + '%';
   }
   async function setFull(v) {

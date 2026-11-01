@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lemitz/Polotno/releases"><img src="https://img.shields.io/badge/version-0.5.0-8b8cff" alt="Версия 0.5.0"></a>
+  <a href="https://github.com/lemitz/Polotno/releases"><img src="https://img.shields.io/badge/version-0.5.1-8b8cff" alt="Версия 0.5.1"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-0078d4" alt="Windows 10 / 11 x64">
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db" alt="Tauri 2">
   <img src="https://img.shields.io/badge/rendering-DOM%20%2B%20WebGL2-b7ff00" alt="DOM + WebGL2">
@@ -160,7 +160,7 @@
 
 При первом запуске открываются четыре демо-полотна, которые описывают само Полотно. Чтобы перенести полотна с сайта, нажми *Скачать JSON* на [kobyla.by/polotno.html](https://kobyla.by/polotno.html) и открой файл через `Ctrl+O`. Картинки из файла переедут в папку вложений.
 
-**Обновление с 0.4.1**: поставь 0.5.0 поверх. При первом запуске старый `workspace.json` разложится по файлам полотен (оригинал останется как `workspace.v041.json`), а встроенные картинки переедут в `attachments/`. Начиная с 0.5.0 обновления приходят сами.
+**Обновление с 0.4.1**: поставь свежую версию поверх. При первом запуске старый `workspace.json` разложится по файлам полотен (оригинал останется как `workspace.v041.json`), а встроенные картинки переедут в `attachments/`. Начиная с 0.5.0 обновления приходят сами.
 
 ### Про частоту кадров
 
@@ -210,8 +210,8 @@ npx tauri build
 **Релиз на GitHub публикуется только по пушу тега версии**: текст берётся из [`RELEASE_NOTES.md`](RELEASE_NOTES.md), `latest.json` для автообновления генерируется:
 
 ```bash
-git tag -a v0.5.0 -m "Polotno v0.5.0"
-git push origin v0.5.0
+git tag -a v0.5.1 -m "Polotno v0.5.1"
+git push origin v0.5.1
 ```
 
 Версия живёт в трёх местах, и они должны совпадать: `package.json`, `src-tauri/Cargo.toml` и `src-tauri/tauri.conf.json`.
