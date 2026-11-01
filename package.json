@@ -7,7 +7,8 @@
     "dev": "tauri dev",
     "build": "tauri build",
     "icons": "tauri icon src-tauri/icons/source.png",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "check-canvas": "node scripts/check-canvas.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2"
