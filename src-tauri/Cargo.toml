@@ -1,6 +1,6 @@
 [package]
 name = "polotno"
-version = "0.4.1"
+version = "0.5.0"
 description = "Полотно — бесконечный причинно-семантический холст"
 authors = ["kobyla.by"]
 edition = "2021"
@@ -9,14 +9,31 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
+# превью ссылок: тот же HTTP/TLS-стек, что у плагина обновлений
+reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "gzip"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+# контейнер .polotno
+zip = { version = "9", default-features = false, features = ["deflate"] }
+
+[target.'cfg(windows)'.dependencies]
+# превью PDF через Windows.Data.Pdf
+windows = { version = "0.62", features = [
+  "Data_Pdf",
+  "Foundation",
+  "Storage",
+  "Storage_Streams",
+  "Win32_System_WinRT",
+] }
 
 [profile.release]
 codegen-units = 1
