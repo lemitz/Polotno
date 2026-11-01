@@ -54,9 +54,9 @@ function estH(c) {
   let body;
   switch (c.type) {
     case 'text': case 'markdown': {
-      const cpl = inner / 8.1, raw = c.type === 'markdown' ? String(c.content || '').replace(/^#{1,6}\s+/gm, '').replace(/[*`_>]/g, '') : c.content;
-      const full = lines(raw, cpl) * 21.7;
-      body = c.customHeight ? c.customHeight - h : Math.min(150, full) + (full > 154 ? 32 : 0); // «Развернуть»
+      const full = bodyFull(c);
+      // свёрнуто: до 150px и кнопка «Развернуть»; expanded: до 460px и «Свернуть»
+      body = c.customHeight ? c.customHeight - h : c.expanded ? Math.min(460, full) + 32 : Math.min(150, full) + (full > 154 ? 32 : 0);
       break;
     }
     case 'image': body = inner * 0.6; break;
@@ -67,6 +67,34 @@ function estH(c) {
     default: body = 40 + 36;
   }
   return Math.round(h + body);
+}
+// полная высота текста карточки (без обрезки)
+const bodyFull = c => c.type === 'markdown' ? mdHeight(c.content, c.w - 28) : lines(c.content, (c.w - 28) / 8.1) * 21.7;
+// Markdown по блокам, как в CSS карточки: строка 14px × 1.6, у абзаца и списка поля 6px, у пункта 3px,
+// пункт сдвинут на 22px, заголовки h1–h3 — 20/18/16px × 1.3 с полями 12/6. Соседние поля схлопываются.
+function mdHeight(src, inner) {
+  const blocks = []; let para = [];
+  const cpl = w => w / 8.1;
+  const flush = () => { if (para.length) { blocks.push({ h: lines(para.join(' '), cpl(inner)) * 22.4, mt: 6, mb: 6 }); para = []; } };
+  const rows = String(src || '').replace(/\r/g, '').split('\n');
+  for (let i = 0; i < rows.length; i++) {
+    const l = rows[i].replace(/\*\*|[*`]/g, ''); let m;
+    if (/^```/.test(l)) { flush(); let n = 0; i++; while (i < rows.length && !/^```/.test(rows[i])) { n++; i++; } blocks.push({ h: n * 18.2 + 22, mt: 8, mb: 8 }); continue; }
+    if ((m = /^(#{1,3})\s+(.*)$/.exec(l))) { flush(); const fs = [20, 18, 16][m[1].length - 1]; blocks.push({ h: lines(m[2], inner / (fs * 0.6)) * fs * 1.3, mt: 12, mb: 6 }); continue; }
+    if ((m = /^\s*([-*+]|\d+[.)])\s+(.*)$/.exec(l))) {
+      flush();
+      const prev = blocks[blocks.length - 1], item = lines(m[2], cpl(inner - 22)) * 22.4;
+      if (prev && prev.list) { prev.h += 3 + item; } else blocks.push({ h: item, mt: 6, mb: 6, list: true });
+      continue;
+    }
+    if (/^>\s?/.test(l)) { flush(); blocks.push({ h: lines(l.slice(1), cpl(inner - 15)) * 22.4, mt: 8, mb: 8 }); continue; }
+    if (!l.trim()) { flush(); continue; }
+    para.push(l.trim());
+  }
+  flush();
+  let h = 0;
+  blocks.forEach((b, i) => { h += b.h; if (i) h += Math.max(blocks[i - 1].mb, b.mt); });
+  return h;
 }
 // кривая связи — как edgeCurve в src/index.html
 function anchor(c, side, H) { const h = H(c); return side === 't' ? [c.x + c.w / 2, c.y] : side === 'b' ? [c.x + c.w / 2, c.y + h] : side === 'l' ? [c.x, c.y + h / 2] : [c.x + c.w, c.y + h / 2]; }
@@ -117,7 +145,10 @@ function check(data, atts, zip) {
       if (c.type === 'text' || c.type === 'markdown') {
         const len = String(c.content || '').length;
         if (len > 1200) W(C(`текст ${len} символов: карточка покажет ~300 и кнопку «Развернуть». Полотно — не документ: разбей на несколько карточек-мыслей`), 'longtext');
-        else if (len > 360 && !c.customHeight && !c.expanded) T(C(`текст ${len} символов будет обрезан под «Развернуть» (при w=${c.w} влезает ~${Math.round((c.w - 28) / 8.1 * 6.9)})`), 'clamp');
+        else if (!c.customHeight) {
+          const full = bodyFull(c), cap = c.expanded ? 460 : 154;
+          if (full > cap) T(C(`текст ≈${Math.round(full)}px выше ${cap}px: ${c.expanded ? 'появится прокрутка' : 'обрежется под «Развернуть»'}. Сократи, расширь карточку${c.expanded ? '' : ' или поставь expanded: true, если текст важно видеть целиком'}`), 'clamp');
+        }
         if (c.type === 'text' && /(^|\n)(#{1,3} |\s*[-*] |\d+\. )/.test(String(c.content || ''))) T(C('в тексте разметка (заголовки, списки) — сделай type: "markdown"'), 'md');
       }
       // читаемость издалека
