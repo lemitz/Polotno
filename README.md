@@ -128,6 +128,8 @@ Every release has two flavours:
 
 Grab them from the [Releases](https://github.com/lemitz/Polotno/releases) page or [build from source](#building-the-installer). Polotno needs the WebView2 Runtime, which is already present on Windows 11 and up-to-date Windows 10 systems; the installer takes care of it if it's missing. The binaries are not code-signed, so Windows SmartScreen may warn the first time: *More info* → *Run anyway*.
 
+**Demo canvas.** [`docs/demo/polotno-tour.polotno`](docs/demo/polotno-tour.polotno) is a tour of everything at once: a card of each of the nine types (text, Markdown, image, video, audio, YouTube, PDF, file, links with previews), groups, a causal route for the presentation, five days of history for the timeline and an unlinked card for the link suggestions. Download it and open with `Ctrl+O` or a double-click.
+
 On first start you get four demo canvases that describe Polotno itself. To bring canvases over from the website, press *Download JSON* on [kobyla.by/polotno.html](https://kobyla.by/polotno.html) and open the file with `Ctrl+O`; pictures embedded in it move into the attachments folder.
 
 **Upgrading from 0.4.1**: install the latest version over it. On first start the old `workspace.json` is split into per-canvas files (the original is kept as `workspace.v041.json`) and embedded pictures move into `attachments/`. From 0.5.0 on, updates arrive by themselves.
