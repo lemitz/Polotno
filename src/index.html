@@ -665,6 +665,7 @@ function normalize(p) {
     c.x = +c.x || 0; c.y = +c.y || 0; c.w = clamp(+c.w || TYPES[c.type].w, 200, 1200);
     c.title = c.title == null ? '' : String(c.title);
     c.content = c.content == null ? '' : String(c.content);
+    if (c.pages != null) { const n = parseInt(c.pages, 10); if (n > 0) c.pages = n; else delete c.pages; }
     if (!c.created) { const t = idTime(c.id); if (t) c.created = t; }
     return c;
   });
@@ -915,7 +916,7 @@ function bodyHTML(c) {
         + (pv && pv.description ? '<span class="lp-d">' + esc(pv.description) + '</span>' : '') + '</span></a>';
     }
     case 'pdf': return (c.thumb
-      ? '<div class="c-pdf"><img src="' + esc(attUrl(c.thumb)) + '" alt="" decoding="async" draggable="false">' + (c.pages ? '<span class="pg">' + c.pages + ' стр.</span>' : '') + '</div>'
+      ? '<div class="c-pdf"><img src="' + esc(attUrl(c.thumb)) + '" alt="" decoding="async" draggable="false">' + (c.pages ? '<span class="pg">' + esc(c.pages) + ' стр.</span>' : '') + '</div>'
       : '<div class="c-pdf nothumb">' + (c._loading ? 'рисую первую страницу…' : esc(c.filename || 'PDF')) + '</div>') + attBtns(c);
     case 'file': return (c.content && c.content.indexOf('data:') === 0
       ? '<a class="c-file" href="' + esc(c.content) + '" download="' + esc(c.filename || 'file') + '">' + ICON.file + '<span class="u">' + esc(c.filename || 'Файл') + '</span></a>'

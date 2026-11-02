@@ -162,7 +162,7 @@
       case 'markdown': parts.push(textBody(plainMd(c.content), 14, 22.4, C.dim)); break;
       case 'image': case 'pdf': {
         const url = await dataUrl(c.type === 'pdf' ? c.thumb : c.content);
-        if (url) { const [nw, nh] = await imgSize(url); const bh = Math.min(room, iw * nh / nw); parts.push(box(url, bh, roundClip(bh))); if (c.type === 'pdf' && c.pages) parts.push('<rect x="' + (bx + iw - 64) + '" y="' + (cy + bh - 30).toFixed(1) + '" width="56" height="22" rx="6" fill="rgba(33,33,33,.85)"/><text x="' + (bx + iw - 36) + '" y="' + (cy + bh - 15).toFixed(1) + '" text-anchor="middle" font-family="' + MONO + '" font-size="12" fill="' + C.paper + '">' + c.pages + ' стр.</text>'); }
+        if (url) { const [nw, nh] = await imgSize(url); const bh = Math.min(room, iw * nh / nw); parts.push(box(url, bh, roundClip(bh))); if (c.type === 'pdf' && c.pages) parts.push('<rect x="' + (bx + iw - 64) + '" y="' + (cy + bh - 30).toFixed(1) + '" width="56" height="22" rx="6" fill="rgba(33,33,33,.85)"/><text x="' + (bx + iw - 36) + '" y="' + (cy + bh - 15).toFixed(1) + '" text-anchor="middle" font-family="' + MONO + '" font-size="12" fill="' + C.paper + '">' + (parseInt(c.pages, 10) || 0) + ' стр.</text>'); }
         else parts.push(pill(c.filename || api.TYPES[c.type].label));
         break;
       }
