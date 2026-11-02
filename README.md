@@ -95,6 +95,8 @@ This is the desktop build of the canvas that lives on [kobyla.by](https://kobyla
 - External links open in your default browser
 - No telemetry and no accounts. The network is only used for what you ask for: link previews, YouTube previews and embeds, the update check
 
+> **Local, but not encrypted.** Polotno sends your canvases nowhere, but they, their attachments and backups are ordinary unencrypted files in your Windows profile. Treat `.polotno` files from other people like any other download. See [SECURITY.md](SECURITY.md).
+
 ## Keyboard shortcuts
 
 | Action | Keys |
