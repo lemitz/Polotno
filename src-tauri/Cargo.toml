@@ -18,7 +18,7 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-base64 = "0.22"
+base64 = "0.23"
 # превью ссылок: тот же HTTP/TLS-стек, что у плагина обновлений
 reqwest = { version = "0.13", default-features = false, features = ["rustls-no-provider", "gzip"] }
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
