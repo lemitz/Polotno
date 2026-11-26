@@ -4,7 +4,10 @@
 use crate::att::store_bytes;
 use crate::util::{err, Res};
 use serde::Serialize;
-use std::time::Duration;
+use std::{
+    net::{IpAddr, SocketAddr},
+    time::Duration,
+};
 use tauri::AppHandle;
 
 const MAX_HTML: usize = 1024 * 1024;
@@ -20,32 +23,135 @@ pub struct Preview {
     image: Option<String>,
 }
 
-fn client() -> Res<reqwest::Client> {
-    reqwest::Client::builder()
+const MAX_REDIRECTS: usize = 8;
+
+fn parse_http_url(raw: &str) -> Res<reqwest::Url> {
+    if raw.len() > 4096 {
+        return Err("URL is too long".into());
+    }
+    let mut url = reqwest::Url::parse(raw).map_err(err)?;
+    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() {
+        return Err("Only credential-free HTTP(S) URLs are allowed".into());
+    }
+    url.set_fragment(None);
+    Ok(url)
+}
+
+fn redirect_target(base: &reqwest::Url, location: &str) -> Res<reqwest::Url> {
+    let target = base.join(location).map_err(err)?;
+    parse_http_url(target.as_str())
+}
+
+fn is_public_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(ip) => {
+            let [a, b, c, _] = ip.octets();
+            !(ip.is_private()
+                || ip.is_loopback()
+                || ip.is_link_local()
+                || ip.is_unspecified()
+                || ip.is_broadcast()
+                || ip.is_multicast()
+                || a == 0
+                || (a == 100 && (64..=127).contains(&b)) // shared address space
+                || (a == 192 && b == 0) // IETF protocol assignments
+                || (a == 192 && b == 0 && c == 2) // documentation
+                || (a == 192 && b == 88 && c == 99) // deprecated 6to4 relay
+                || (a == 192 && b == 168)
+                || (a == 198 && (b == 18 || b == 19)) // benchmarking
+                || (a == 198 && b == 51 && c == 100) // documentation
+                || (a == 203 && b == 0 && c == 113) // documentation
+                || a >= 224)
+        }
+        IpAddr::V6(ip) => {
+            let s = ip.segments();
+            // Only global unicast is considered. Exclude special-purpose 2001::/23,
+            // documentation, and 6to4 (which can tunnel to an otherwise blocked IPv4).
+            (s[0] & 0xe000) == 0x2000
+                && !(s[0] == 0x2001 && s[1] <= 0x01ff)
+                && !(s[0] == 0x2001 && s[1] == 0x0db8)
+                && !(s[0] == 0x3fff && (s[1] & 0xfff0) == 0) // documentation (RFC 9637)
+                && s[0] != 0x2002
+                && !ip.is_unspecified()
+                && !ip.is_loopback()
+                && !ip.is_unique_local()
+                && !ip.is_unicast_link_local()
+                && !ip.is_multicast()
+                && ip.to_ipv4().is_none()
+        }
+    }
+}
+
+async fn public_addresses(url: &reqwest::Url) -> Res<Vec<SocketAddr>> {
+    let host = url.host_str().ok_or_else(|| "URL has no host".to_string())?;
+    let port = url.port_or_known_default().ok_or_else(|| "URL has no port".to_string())?;
+    let ips = if let Ok(ip) = host.parse::<IpAddr>() {
+        vec![ip]
+    } else {
+        tokio::net::lookup_host((host, port)).await.map_err(err)?.map(|addr| addr.ip()).collect()
+    };
+    if ips.is_empty() || ips.iter().any(|ip| !is_public_ip(*ip)) {
+        return Err("URL resolves to a non-public address".into());
+    }
+    Ok(ips.into_iter().map(|ip| SocketAddr::new(ip, port)).collect())
+}
+
+fn client(url: &reqwest::Url, addrs: &[SocketAddr]) -> Res<reqwest::Client> {
+    let mut builder = reqwest::Client::builder()
         .user_agent(UA)
         .timeout(Duration::from_secs(12))
         .connect_timeout(Duration::from_secs(6))
-        .redirect(reqwest::redirect::Policy::limited(8))
-        .build()
-        .map_err(err)
+        .redirect(reqwest::redirect::Policy::none())
+        .no_proxy();
+    if url.host_str().and_then(|host| host.parse::<IpAddr>().ok()).is_none() {
+        builder = builder.resolve_to_addrs(url.host_str().unwrap_or_default(), addrs);
+    }
+    builder.build().map_err(err)
 }
 
-async fn get_limited(c: &reqwest::Client, url: &str, max: usize) -> Res<(reqwest::Url, String, Vec<u8>)> {
-    let mut r = c.get(url).header("Accept-Language", "ru,en;q=0.8").send().await.map_err(err)?;
-    if !r.status().is_success() {
-        return Err(format!("HTTP {}", r.status().as_u16()));
-    }
-    let final_url = r.url().clone();
-    let ct = r.headers().get("content-type").and_then(|v| v.to_str().ok()).unwrap_or("").to_ascii_lowercase();
-    let mut buf = Vec::new();
-    while let Some(chunk) = r.chunk().await.map_err(err)? {
-        buf.extend_from_slice(&chunk);
-        if buf.len() >= max {
-            buf.truncate(max);
-            break;
+async fn get_limited(raw_url: &str, max: usize) -> Res<(reqwest::Url, String, Vec<u8>)> {
+    let mut url = parse_http_url(raw_url)?;
+    for redirects in 0..=MAX_REDIRECTS {
+        // Validate and pin DNS results for every hop. Redirects are handled manually so
+        // a server cannot redirect the request into localhost or another private network.
+        let addrs = public_addresses(&url).await?;
+        let c = client(&url, &addrs)?;
+        let mut response = c.get(url.clone()).header("Accept-Language", "ru,en;q=0.8").send().await.map_err(err)?;
+        if response.status().is_redirection() {
+            if redirects == MAX_REDIRECTS {
+                return Err("Too many redirects".into());
+            }
+            let location = response.headers().get(reqwest::header::LOCATION).and_then(|v| v.to_str().ok()).ok_or_else(|| "Redirect has no valid Location".to_string())?;
+            url = redirect_target(&url, location)?;
+            continue;
         }
+        if !response.status().is_success() {
+            return Err(format!("HTTP {}", response.status().as_u16()));
+        }
+        let content_type = response.headers().get(reqwest::header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("").to_ascii_lowercase();
+        let mut body = Vec::new();
+        while let Some(chunk) = response.chunk().await.map_err(err)? {
+            if body.len().saturating_add(chunk.len()) > max {
+                return Err("Response is too large".into());
+            }
+            body.extend_from_slice(&chunk);
+        }
+        return Ok((url, content_type, body));
     }
-    Ok((final_url, ct, buf))
+    Err("Too many redirects".into())
+}
+
+fn raster_extension(content_type: &str, body: &[u8]) -> Option<&'static str> {
+    let mime = content_type.split(';').next()?.trim();
+    let (extension, valid) = match mime {
+        "image/png" => ("png", body.starts_with(b"\x89PNG\r\n\x1a\n")),
+        "image/jpeg" => ("jpg", body.starts_with(b"\xff\xd8\xff")),
+        "image/gif" => ("gif", body.starts_with(b"GIF87a") || body.starts_with(b"GIF89a")),
+        "image/webp" => ("webp", body.len() >= 12 && &body[..4] == b"RIFF" && &body[8..12] == b"WEBP"),
+        "image/avif" => ("avif", body.len() >= 12 && &body[4..8] == b"ftyp" && (&body[8..12] == b"avif" || &body[8..12] == b"avis")),
+        _ => return None, // SVG and other unsupported image types are deliberately not persisted.
+    };
+    (valid && !body.is_empty()).then_some(extension)
 }
 
 fn decode_entities(s: &str) -> String {
@@ -193,8 +299,7 @@ mod tests {
         if std::env::var("PREVIEW_NET").is_err() { return }
         let _ = rustls::crypto::ring::default_provider().install_default();
         let r = tauri::async_runtime::block_on(async {
-            let c = client()?;
-            get_limited(&c, "https://opengraph.githubassets.com/30a2d838a157320094b88c3d22294ee4cb8f022374ecdd127d8d37870a2ac473/lemitz/Polotno", MAX_IMAGE).await
+            get_limited("https://opengraph.githubassets.com/30a2d838a157320094b88c3d22294ee4cb8f022374ecdd127d8d37870a2ac473/lemitz/Polotno", MAX_IMAGE).await
         });
         match r { Ok((u, ct, b)) => println!("ok {u} {ct} {}", b.len()), Err(e) => panic!("{e}") }
     }
@@ -205,20 +310,48 @@ mod tests {
         println!("title={t}\ndesc={d}\nsite={s}\nimage={i}");
         assert!(!i.is_empty());
     }
+
+    #[test]
+    fn rejects_unsafe_urls_and_addresses() {
+        assert!(parse_http_url("file:///etc/passwd").is_err());
+        assert!(parse_http_url("http://user:pass@example.com/").is_err());
+        let base = parse_http_url("https://example.com/a").unwrap();
+        assert_eq!(redirect_target(&base, "/next").unwrap().as_str(), "https://example.com/next");
+        assert!(redirect_target(&base, "file:///etc/passwd").is_err());
+        assert!(redirect_target(&base, "https://user@example.com/").is_err());
+        let localhost = parse_http_url("http://localhost/").unwrap();
+        assert!(tauri::async_runtime::block_on(public_addresses(&localhost)).is_err());
+        let private_redirect = redirect_target(&base, "http://127.0.0.1/").unwrap();
+        assert!(tauri::async_runtime::block_on(public_addresses(&private_redirect)).is_err());
+        for ip in ["127.0.0.1", "10.0.0.1", "169.254.169.254", "192.168.1.1", "100.64.0.1", "224.0.0.1", "192.0.2.1"] {
+            assert!(!is_public_ip(ip.parse().unwrap()), "must reject {ip}");
+        }
+        for ip in ["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"] {
+            assert!(is_public_ip(ip.parse().unwrap()), "must accept {ip}");
+        }
+        for ip in ["::1", "fc00::1", "fe80::1", "2001:db8::1", "2002:0808:0808::1", "3fff::1"] {
+            assert!(!is_public_ip(ip.parse().unwrap()), "must reject {ip}");
+        }
+    }
+
+    #[test]
+    fn only_stores_verified_raster_images() {
+        assert_eq!(raster_extension("image/png", b"\x89PNG\r\n\x1a\nrest"), Some("png"));
+        assert_eq!(raster_extension("image/svg+xml", b"<svg></svg>"), None);
+        assert_eq!(raster_extension("image/bmp", b"BM\x00\x00"), None);
+        assert_eq!(raster_extension("image/png", b"<html>not an image</html>"), None);
+    }
 }
 
 #[tauri::command]
 pub async fn link_preview(app: AppHandle, url: String) -> Res<Preview> {
-    if !(url.starts_with("http://") || url.starts_with("https://")) {
-        return Err("нужна ссылка http(s)".into());
-    }
-    let c = client()?;
-    let (final_url, ct, body) = get_limited(&c, &url, MAX_HTML).await?;
+    let (final_url, ct, body) = get_limited(&url, MAX_HTML).await?;
     let host = final_url.host_str().unwrap_or("").trim_start_matches("www.").to_string();
     let mut p = Preview { url: url.clone(), site: host.clone(), ..Default::default() };
     if ct.starts_with("image/") {
-        let ext = ct.trim_start_matches("image/").split(';').next().unwrap_or("png").replace("jpeg", "jpg");
-        p.image = store_bytes(&app, &format!("preview.{ext}"), &body).ok().map(|a| a.file);
+        if let Some(ext) = raster_extension(&ct, &body) {
+            p.image = store_bytes(&app, &format!("preview.{ext}"), &body).ok().map(|a| a.file);
+        }
         p.title = final_url.path_segments().and_then(|s| s.last().map(String::from)).unwrap_or(host);
         return Ok(p);
     }
@@ -231,10 +364,8 @@ pub async fn link_preview(app: AppHandle, url: String) -> Res<Preview> {
     }
     if !image.is_empty() {
         if let Ok(img_url) = final_url.join(&image) {
-            if let Ok((u, ict, bytes)) = get_limited(&c, img_url.as_str(), MAX_IMAGE).await {
-                if ict.starts_with("image/") && bytes.len() < MAX_IMAGE {
-                    let ext = ict.trim_start_matches("image/").split(';').next().unwrap_or("png").replace("jpeg", "jpg").replace("svg+xml", "svg");
-                    let _ = u;
+            if let Ok((_, ict, bytes)) = get_limited(img_url.as_str(), MAX_IMAGE).await {
+                if let Some(ext) = raster_extension(&ict, &bytes) {
                     p.image = store_bytes(&app, &format!("preview.{ext}"), &bytes).ok().map(|a| a.file);
                 }
             }

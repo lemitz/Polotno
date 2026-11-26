@@ -852,12 +852,26 @@ function undo() { const h = hist(); if (!h.undo.length) return; h.redo.push(snap
 function redo() { const h = hist(); if (!h.redo.length) return; h.undo.push(snap()); restore(h.redo.pop()); }
 
 /* ---------- markdown (без внешних библиотек) ---------- */
+function safeExternalUrl(value) {
+  if (typeof value !== 'string' || /[\u0000-\u0020\u007f]/.test(value)) return '';
+  let url;
+  try { url = new URL(value); } catch (_) { return ''; }
+  if (url.protocol === 'http:' || url.protocol === 'https:') {
+    if (!url.hostname || url.username || url.password) return '';
+    return url.href;
+  }
+  if (url.protocol === 'mailto:' && url.pathname && !url.hostname) return url.href;
+  return '';
+}
 function inline(s) {
   s = esc(s);
   const codes = [];
   s = s.replace(/`([^`]+)`/g, (m, c) => { codes.push(c); return '\u0000' + (codes.length - 1) + '\u0000'; });
   s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
-  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, label, raw) => {
+    const href = safeExternalUrl(raw);
+    return href ? '<a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>' : label;
+  });
   return s.replace(/\u0000(\d+)\u0000/g, (m, i) => '<code>' + codes[+i] + '</code>');
 }
 function renderMarkdown(src) {
@@ -905,15 +919,16 @@ function bodyHTML(c) {
     case 'audio': return '<audio src="' + esc(attUrl(c.content)) + '" controls preload="metadata"></audio>';
     case 'youtube': return '<div class="c-yt" data-yt="' + esc(c.content) + '"><img src="https://i.ytimg.com/vi/' + esc(c.content) + '/hqdefault.jpg" alt="" loading="lazy" draggable="false"><div class="play"></div></div>';
     case 'link': {
-      const pv = c.preview;
-      if (!pv && !c._loading) return '<a class="c-link" href="' + esc(c.content) + '" target="_blank" rel="noopener noreferrer">' + ICON.ext + '<span class="u">' + esc(c.content) + '</span></a>'
-        + (DESK ? '<div class="c-row"><button class="c-btn" data-act="preview">Загрузить превью</button></div>' : '');
+      const pv = c.preview, href = safeExternalUrl(c.content), tag = href ? 'a' : 'div';
+      const open = href ? ' href="' + esc(href) + '" target="_blank" rel="noopener noreferrer"' : '';
+      if (!pv && !c._loading) return '<' + tag + ' class="c-link"' + open + '>' + ICON.ext + '<span class="u">' + esc(c.content) + '</span></' + tag + '>'
+        + (DESK && href ? '<div class="c-row"><button class="c-btn" data-act="preview">Загрузить превью</button></div>' : '');
       let host = c.content; try { host = new URL(c.content).hostname.replace(/^www\./, ''); } catch (_) {}
-      return '<a class="c-lp' + (c._loading ? ' loading' : '') + '" href="' + esc(c.content) + '" target="_blank" rel="noopener noreferrer">'
+      return '<' + tag + ' class="c-lp' + (c._loading ? ' loading' : '') + '"' + open + '>'
         + (pv && pv.image ? '<img src="' + esc(attUrl(pv.image)) + '" alt="" decoding="async" draggable="false">' : '')
         + '<span class="lp-b"><span class="lp-s">' + esc((pv && pv.site) || host) + '</span>'
         + '<span class="lp-t">' + esc((pv && pv.title) || c.content) + '</span>'
-        + (pv && pv.description ? '<span class="lp-d">' + esc(pv.description) + '</span>' : '') + '</span></a>';
+        + (pv && pv.description ? '<span class="lp-d">' + esc(pv.description) + '</span>' : '') + '</span></' + tag + '>';
     }
     case 'pdf': return (c.thumb
       ? '<div class="c-pdf"><img src="' + esc(attUrl(c.thumb)) + '" alt="" decoding="async" draggable="false">' + (c.pages ? '<span class="pg">' + esc(c.pages) + ' стр.</span>' : '') + '</div>'
@@ -2308,12 +2323,12 @@ function deskHooks() {
     open.lastElementChild.innerHTML = '<kbd>Ctrl+O</kbd>';
     last.after(open);
   }
-  // внешние ссылки открываем в системном браузере, вложенные файлы сохраняем через диалог
+  // Prevent native navigation for every anchor; only explicit external schemes go through Tauri's opener.
   document.addEventListener('click', async e => {
-    const a = e.target.closest && e.target.closest('a[href]'); if (!a) return;
+    const a = e.target.closest && e.target.closest('a'); if (!a) return;
+    e.preventDefault();
     const href = a.getAttribute('href') || '';
-    if (a.hasAttribute('download') && href.indexOf('data:') === 0) {
-      e.preventDefault();
+    if (a.hasAttribute('download') && /^data:[^,]*;base64,/i.test(href)) {
       const name = a.getAttribute('download') || 'file';
       try {
         const path = await invoke('plugin:dialog|save', { options: { title: 'Сохранить файл', defaultPath: name } });
@@ -2323,12 +2338,10 @@ function deskHooks() {
       } catch (err) { toast('Не удалось сохранить: ' + err); }
       return;
     }
-    if (/^(https?:|mailto:)/i.test(href)) {
-      e.preventDefault();
-      invoke('plugin:opener|open_url', { url: href }).catch(err => toast('Не открылась ссылка: ' + err));
-    }
+    const safeUrl = safeExternalUrl(href);
+    if (safeUrl) invoke('plugin:opener|open_url', { url: safeUrl }).catch(err => toast('Не открылась ссылка: ' + err));
   }, true);
-  document.addEventListener('auxclick', e => { if (e.button === 1 && e.target.closest && e.target.closest('a[href]')) e.preventDefault(); }, true);
+  document.addEventListener('auxclick', e => { if (e.target.closest && e.target.closest('a')) e.preventDefault(); }, true);
   // браузерное меню и перезагрузка в приложении не нужны; в полях ввода меню оставляем (копировать, вставить)
   document.addEventListener('contextmenu', e => { if (!(e.target.closest && e.target.closest(EDITABLE))) e.preventDefault(); });
   addEventListener('keydown', e => {

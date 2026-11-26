@@ -12,11 +12,15 @@ use tauri::{AppHandle, Emitter, State};
 /// Были изменения с последнего бэкапа.
 pub struct Dirty(pub AtomicBool);
 
-fn project_path(app: &AppHandle, id: &str) -> Res<std::path::PathBuf> {
+fn project_path_in(dir: &std::path::Path, id: &str) -> Res<std::path::PathBuf> {
     if !safe_id(id) {
         return Err(format!("плохой id полотна: {id}"));
     }
-    Ok(sub_dir(app, "projects")?.join(format!("{id}.json")))
+    Ok(dir.join(format!("{id}.json")))
+}
+
+fn project_path(app: &AppHandle, id: &str) -> Res<std::path::PathBuf> {
+    project_path_in(&sub_dir(app, "projects")?, id)
 }
 
 /// Старый формат (v0.4.1): всё в одном `workspace.json`. Раскладываем по файлам один раз.
@@ -85,4 +89,27 @@ pub async fn project_delete(app: AppHandle, dirty: State<'_, Dirty>, id: String)
     }
     dirty.0.store(true, Ordering::Relaxed);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::project_path_in;
+    use std::path::Path;
+
+    #[test]
+    fn project_path_rejects_unsafe_ids() {
+        let dir = Path::new("projects");
+        for id in ["", "..", "../outside", "a/b", "a\\b"] {
+            assert!(project_path_in(dir, id).is_err(), "accepted unsafe id: {id:?}");
+        }
+    }
+
+    #[test]
+    fn project_path_maps_safe_id_to_project_file() {
+        let dir = Path::new("projects");
+        assert_eq!(
+            project_path_in(dir, "canvas_01-abc").unwrap(),
+            dir.join("canvas_01-abc.json")
+        );
+    }
 }

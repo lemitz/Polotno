@@ -38,8 +38,15 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Res<()> {
     let mut tmp = path.as_os_str().to_owned();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
-    fs::write(&tmp, bytes).map_err(err)?;
-    fs::rename(&tmp, path).map_err(err)
+    if let Err(e) = fs::write(&tmp, bytes) {
+        let _ = fs::remove_file(&tmp);
+        return Err(err(e));
+    }
+    if let Err(e) = fs::rename(&tmp, path) {
+        let _ = fs::remove_file(&tmp);
+        return Err(err(e));
+    }
+    Ok(())
 }
 
 /// Идентификатор полотна годится в имя файла.
@@ -88,5 +95,70 @@ pub fn att_refs(text: &str, out: &mut std::collections::HashSet<String>) {
             out.insert(text[s..e].trim_end_matches('.').to_string());
         }
         i = e.max(s);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{rand_id, write_atomic};
+    use std::{fs, path::PathBuf};
+
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new() -> Self {
+            let path = std::env::temp_dir().join(format!(
+                "polotno-util-test-{}-{}",
+                std::process::id(),
+                rand_id()
+            ));
+            fs::create_dir_all(&path).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[test]
+    fn write_atomic_replaces_existing_file() {
+        let dir = TempDir::new();
+        let target = dir.0.join("target.json");
+        fs::write(&target, b"old contents").unwrap();
+
+        write_atomic(&target, b"new contents").unwrap();
+
+        assert_eq!(fs::read(&target).unwrap(), b"new contents");
+        assert!(!dir.0.join("target.json.tmp").exists());
+    }
+
+    #[test]
+    fn write_atomic_failure_preserves_existing_file() {
+        let dir = TempDir::new();
+        let target = dir.0.join("target.json");
+        fs::write(&target, b"keep me").unwrap();
+        fs::create_dir(dir.0.join("target.json.tmp")).unwrap();
+
+        assert!(write_atomic(&target, b"replacement").is_err());
+
+        assert_eq!(fs::read(&target).unwrap(), b"keep me");
+    }
+
+    #[test]
+    fn write_atomic_rename_failure_cleans_temporary_file() {
+        let dir = TempDir::new();
+        let target = dir.0.join("target.json");
+        fs::create_dir(&target).unwrap();
+        let marker = target.join("keep.txt");
+        fs::write(&marker, b"keep me").unwrap();
+
+        assert!(write_atomic(&target, b"replacement").is_err());
+
+        assert_eq!(fs::read(&marker).unwrap(), b"keep me");
+        assert_eq!(fs::read_dir(&target).unwrap().count(), 1);
+        assert!(!dir.0.join("target.json.tmp").exists());
     }
 }

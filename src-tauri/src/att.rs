@@ -7,7 +7,7 @@ use serde::Serialize;
 use std::{
     collections::HashSet,
     fs,
-    io::{Read, Write},
+    io::{Read, Seek, Write},
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
@@ -179,38 +179,43 @@ pub async fn polotno_export(app: AppHandle, path: String, data: String) -> Res<(
     .map_err(err)?
 }
 
+fn import_zip<R: Read + Seek>(mut z: zip::ZipArchive<R>, d: &Path) -> Res<String> {
+    let mut json = None;
+    for i in 0..z.len() {
+        let mut e = z.by_index(i).map_err(err)?;
+        let name = e.name().map_err(err)?.to_string();
+        if name == "workspace.json" {
+            let mut s = String::new();
+            e.read_to_string(&mut s).map_err(err)?;
+            json = Some(s);
+        } else if let Some(file) = name.strip_prefix("attachments/") {
+            // имена случайные, совпадение значит тот же файл
+            if safe_file(file) && !d.join(file).exists() {
+                let mut out = fs::File::create(d.join(file)).map_err(err)?;
+                std::io::copy(&mut e, &mut out).map_err(err)?;
+            }
+        }
+    }
+    json.ok_or_else(|| "в архиве нет workspace.json".to_string())
+}
+
+fn import_path(path: &Path, attachments_dir: impl FnOnce() -> Res<PathBuf>) -> Res<String> {
+    let mut f = fs::File::open(path).map_err(err)?;
+    let mut head = [0u8; 2];
+    let n = f.read(&mut head).map_err(err)?;
+    if n < 2 || &head != b"PK" {
+        return fs::read_to_string(path).map_err(err);
+    }
+    let z = zip::ZipArchive::new(fs::File::open(path).map_err(err)?).map_err(err)?;
+    import_zip(z, &attachments_dir()?)
+}
+
 /// Прочитать `.polotno` (zip или старый JSON) или `.json`. Вложения из zip раскладываются по месту.
 #[tauri::command]
 pub async fn polotno_import(app: AppHandle, path: String) -> Res<String> {
-    tauri::async_runtime::spawn_blocking(move || {
-        let mut f = fs::File::open(&path).map_err(err)?;
-        let mut head = [0u8; 2];
-        let n = f.read(&mut head).map_err(err)?;
-        if n < 2 || &head != b"PK" {
-            return fs::read_to_string(&path).map_err(err);
-        }
-        let mut z = zip::ZipArchive::new(fs::File::open(&path).map_err(err)?).map_err(err)?;
-        let d = dir(&app)?;
-        let mut json = None;
-        for i in 0..z.len() {
-            let mut e = z.by_index(i).map_err(err)?;
-            let name = e.name().map_err(err)?.to_string();
-            if name == "workspace.json" {
-                let mut s = String::new();
-                e.read_to_string(&mut s).map_err(err)?;
-                json = Some(s);
-            } else if let Some(file) = name.strip_prefix("attachments/") {
-                // имена случайные, совпадение значит тот же файл
-                if safe_file(file) && !d.join(file).exists() {
-                    let mut out = fs::File::create(d.join(file)).map_err(err)?;
-                    std::io::copy(&mut e, &mut out).map_err(err)?;
-                }
-            }
-        }
-        json.ok_or_else(|| "в архиве нет workspace.json".to_string())
-    })
-    .await
-    .map_err(err)?
+    tauri::async_runtime::spawn_blocking(move || import_path(Path::new(&path), || dir(&app)))
+        .await
+        .map_err(err)?
 }
 
 /// Убирает вложения, на которые больше никто не ссылается: ни полотна, ни бэкапы.
@@ -242,4 +247,101 @@ pub fn gc(app: &AppHandle) -> Res<usize> {
         }
     }
     Ok(removed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{import_path, import_zip};
+    use std::{
+        fs,
+        io::{Cursor, Write},
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    use zip::{write::SimpleFileOptions, ZipWriter};
+
+    struct TempDir(PathBuf);
+
+    impl TempDir {
+        fn new() -> Self {
+            let unique = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+            let path = std::env::temp_dir().join(format!("polotno-att-import-{}-{unique}", std::process::id()));
+            fs::create_dir(&path).unwrap();
+            Self(path)
+        }
+    }
+
+    impl Drop for TempDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn archive(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let mut writer = ZipWriter::new(Cursor::new(Vec::new()));
+        for (name, contents) in entries {
+            writer.start_file(*name, SimpleFileOptions::default()).unwrap();
+            writer.write_all(contents).unwrap();
+        }
+        writer.finish().unwrap().into_inner()
+    }
+
+    #[test]
+    fn imports_legacy_json_unchanged() {
+        let temp = TempDir::new();
+        let path = temp.0.join("legacy.polotno");
+        let json = "{\n  \"name\": \"legacy workspace\"\n}\n";
+        fs::write(&path, json).unwrap();
+
+        let imported = import_path(&path, || Err("unexpected attachment directory request".into())).unwrap();
+
+        assert_eq!(imported, json);
+    }
+
+    #[test]
+    fn rejects_malformed_zip_and_non_utf8_legacy_json() {
+        let temp = TempDir::new();
+        let malformed_zip = temp.0.join("malformed.polotno");
+        fs::write(&malformed_zip, b"PKnot a zip").unwrap();
+        assert!(import_path(&malformed_zip, || Ok(temp.0.clone())).is_err());
+
+        let non_utf8_json = temp.0.join("non-utf8.json");
+        fs::write(&non_utf8_json, b"{\xff}").unwrap();
+        assert!(import_path(&non_utf8_json, || Err("unexpected attachment directory request".into())).is_err());
+    }
+
+    #[test]
+    fn imports_workspace_and_flat_attachment_entries() {
+        let temp = TempDir::new();
+        let destination = temp.0.join("attachments");
+        fs::create_dir(&destination).unwrap();
+        let bytes = archive(&[
+            ("workspace.json", br#"{"name":"test"}"#),
+            ("attachments/image-1.png", b"image bytes"),
+        ]);
+        let zip = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
+
+        let workspace = import_zip(zip, &destination).unwrap();
+
+        assert_eq!(workspace, r#"{"name":"test"}"#);
+        assert_eq!(fs::read(destination.join("image-1.png")).unwrap(), b"image bytes");
+    }
+
+    #[test]
+    fn rejects_traversal_and_nested_attachment_names() {
+        let temp = TempDir::new();
+        let destination = temp.0.join("attachments");
+        fs::create_dir(&destination).unwrap();
+        let bytes = archive(&[
+            ("workspace.json", b"{}"),
+            ("attachments/../escaped.txt", b"traversal"),
+            ("attachments/nested/file.txt", b"nested"),
+        ]);
+        let zip = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
+
+        assert_eq!(import_zip(zip, &destination).unwrap(), "{}");
+        assert!(!temp.0.join("escaped.txt").exists());
+        assert!(!temp.0.join("nested").exists());
+        assert_eq!(fs::read_dir(&destination).unwrap().count(), 0);
+    }
 }
