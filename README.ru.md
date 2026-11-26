@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lemitz/Polotno/releases"><img src="https://img.shields.io/badge/version-0.5.3-8b8cff" alt="Версия 0.5.3"></a>
+  <a href="https://github.com/lemitz/Polotno/releases"><img src="https://img.shields.io/badge/version-0.6.0-8b8cff" alt="Версия 0.6.0"></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-0078d4" alt="Windows 10 / 11 x64">
   <img src="https://img.shields.io/badge/built%20with-Tauri%202-24c8db" alt="Tauri 2">
   <img src="https://img.shields.io/badge/rendering-DOM%20%2B%20WebGL2-b7ff00" alt="DOM + WebGL2">
@@ -243,11 +243,11 @@ npx tauri build
 **Релиз на GitHub публикуется только по пушу тега версии**: текст берётся из [`RELEASE_NOTES.md`](RELEASE_NOTES.md), `latest.json` для автообновления генерируется:
 
 ```bash
-git tag -a v0.5.3 -m "Polotno v0.5.3"
-git push origin v0.5.3
+git tag -a v0.6.0 -m "Polotno v0.6.0"
+git push origin v0.6.0
 ```
 
-Версия живёт в трёх местах, и они должны совпадать: `package.json`, `src-tauri/Cargo.toml` и `src-tauri/tauri.conf.json`.
+Версия живёт в пяти местах, и они должны совпадать: `package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` и `src-tauri/tauri.conf.json`.
 
 ## Структура проекта
 

@@ -1,15 +1,29 @@
-# Polotno v0.5.3
+# Polotno v0.6.0
+
+This release hardens external links and link previews, and adds regression coverage for workspace files, storage paths and backups.
+
+## Security and link previews
+
+- **External URLs are validated before navigation.** Markdown links and link cards accept only credential-free `http:`, `https:` or `mailto:` URLs. Control characters and whitespace are rejected, and desktop clicks are intercepted so untrusted anchors cannot navigate the app's WebView; approved links go through the system opener.
+- **Link previews are protected against SSRF.** Preview URLs must be credential-free HTTP(S), DNS results are checked and pinned to public addresses, and proxy settings are bypassed. Redirects are followed manually and every hop is revalidated, preventing redirects to localhost, private, link-local, reserved or other non-public IPv4/IPv6 addresses. Redirect count and response sizes are bounded.
+- **Preview images must be verified raster formats.** The MIME type and file signature must match supported PNG, JPEG, GIF, WebP or AVIF data before the image is stored. SVG and other unsupported image types are not persisted, preventing active SVG content from being treated as a safe preview.
+
+## Storage and backup fixes and tests
+
+- `.polotno` import now has regression tests for legacy JSON compatibility, malformed ZIPs, invalid UTF-8, normal workspace and attachment entries, and rejection of traversal or nested attachment paths.
+- Store and path tests cover valid project IDs and reject unsafe project and backup IDs. Atomic-write tests verify successful replacement, preserve existing data on failures, and ensure temporary files are cleaned up.
+- Backup tests verify retention of the newest 40 snapshots plus one per recent day, and confirm that restoring a workspace keeps a complete pre-restore snapshot that can itself be restored. The retention logic avoids keeping older same-day snapshots as extra daily entries.
+
+## Previous release: v0.5.3
 
 Dragging no longer gets stuck on link cards.
 
-## Changes
-
-- **Link cards can be dragged by their preview.** Before, grabbing a link card by its preview (which covers most of the card) started the browser's own link drag instead of moving the card: the card jerked a few pixels and stopped, and in the desktop app the canvas could stay unresponsive to dragging until the window lost focus. Now the whole card drags as usual, and a plain click on the link still opens it.
+- Link cards can be dragged by their preview; a plain click still opens the link.
 - The browser's own drag-and-drop is disabled inside the canvas (files from Explorer are still accepted). A drag interrupted by the window losing focus is ended cleanly.
 
-Installed copies of 0.5.2 offer this update by themselves a few seconds after start.
+At the time, installed copies of 0.5.2 offered v0.5.3 by themselves a few seconds after start.
 
-## Downloads
+## Downloads from v0.5.3
 
 - `Polotno_0.5.3_x64-setup.exe`: per-user NSIS installer, no admin rights needed; registers the `.polotno` file type and updates itself.
 - `Polotno_0.5.3_x64-portable.exe`: portable executable, no installation required, no automatic updates.
